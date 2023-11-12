@@ -129,25 +129,35 @@ class ImageDataset(Dataset):
 
         #if self.is_train:
         if self.random_crop:
-            arr_image, arr_class, arr_instance = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
+            arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
         else:
-            arr_image, arr_class, arr_instance = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
+            arr_image, arr_class = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
         #else:
             #arr_image, arr_class, arr_instance = resize_arr([pil_image, pil_class], self.resolution, keep_aspect=False)
 
         if self.random_flip and random.random() < 0.5:
             arr_image = arr_image[:, ::-1].copy()
             arr_class = arr_class[:, ::-1].copy()
-            arr_instance = arr_instance[:, ::-1].copy() if arr_instance is not None else None
 
-        arr_image = arr_image.astype(np.float32) / 127.5 - 1
+
+        arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
+        #arr_image = arr_image.astype(np.float32)
+        
+        min_val = arr_image.min()
+        max_val = arr_image.max()
+
+        # Normalize to [0, 1]
+        arr_image = (arr_image - min_val) / (max_val - min_val)
+
+        # Scale to [-1, 1]
+        arr_image = 2 * arr_image - 1
 
         out_dict['path'] = path
         out_dict['label_ori'] = arr_class.copy()
-        out_dict['label'] = arr_class[None, ]#ñ
+        out_dict['label'] = arr_class[None, ]
 
 
-        return arr_image, out_dict #ñ
+        return arr_image, out_dict 
 
 def read_nrrd(file_path):
     data, header = nrrd.read(file_path)
@@ -187,7 +197,7 @@ def center_crop_arr(np_list, volume_size):
     np_image, np_class = np_list
 
     D, H, W = np_image.shape
-    crop_D, crop_H, crop_W = volume_size
+    crop_D, crop_H, crop_W = [volume_size, volume_size, volume_size]
 
     # Ensure the crop size is smaller than the image size
     crop_D = min(crop_D, D)
@@ -210,7 +220,7 @@ def center_crop_arr(np_list, volume_size):
 def random_crop_arr(np_list, volume_size):
     np_image, np_class = np_list
     D, H, W = np_image.shape
-    crop_D, crop_H, crop_W = volume_size
+    crop_D, crop_H, crop_W = [volume_size, volume_size, volume_size]
 
     crop_D = min(crop_D, D)
     crop_H = min(crop_H, H)

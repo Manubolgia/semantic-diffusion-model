@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: MPI",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/image_train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--data_dir", "./data/assoca_sample",
+                "--dataset_mode", "assoca",
+                "--lr", "1e-4",
+                "--batch_size", "1",
+                "--attention_resolutions", "32,16,8",
+                "--diffusion_steps", "100",
+                "--image_size", "16",
+                "--learn_sigma", "True",
+                "--noise_schedule", "linear",
+                "--num_channels", "64",
+                "--num_head_channels", "16",
+                "--num_res_blocks", "2",
+                "--resblock_updown", "True",
+                "--use_fp16", "True",
+                "--use_scale_shift_norm", "True",
+                "--use_checkpoint", "True",
+                "--num_classes", "1",
+                "--class_cond", "True",
+                "--no_instance", "True"
+            ],
+            "env": {
+                "OMPI_ALLOW_RUN_AS_ROOT": "1",
+                "OMPI_ALLOW_RUN_AS_ROOT_CONFIRM": "1"
+            },
+            "mpiExecArgs": ["-n", "1"],
+            "mpiExecPath": "mpiexec"
+        }
+    ]
+}

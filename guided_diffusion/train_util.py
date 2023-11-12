@@ -269,9 +269,9 @@ class TrainLoop:
 
         # create one-hot label map
         label_map = data['label']
-        bs, _, h, w = label_map.size()
+        bs, _, d, h, w = label_map.size()
         nc = self.num_classes
-        input_label = th.FloatTensor(bs, nc, h, w).zero_()
+        input_label = th.FloatTensor(bs, nc, d, h, w).zero_()
         input_semantics = input_label.scatter_(1, label_map, 1.0)
 
         # concatenate instance map if it exists

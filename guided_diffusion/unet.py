@@ -101,7 +101,7 @@ class Upsample(nn.Module):
                  upsampling occurs in the inner-two dimensions.
     """
 
-    def __init__(self, channels, use_conv, dims=2, out_channels=None):
+    def __init__(self, channels, use_conv, dims=3, out_channels=None):
         super().__init__()
         self.channels = channels
         self.out_channels = out_channels or channels
@@ -133,7 +133,7 @@ class Downsample(nn.Module):
                  downsampling occurs in the inner-two dimensions.
     """
 
-    def __init__(self, channels, use_conv, dims=2, out_channels=None):
+    def __init__(self, channels, use_conv, dims=3, out_channels=None):
         super().__init__()
         self.channels = channels
         self.out_channels = out_channels or channels
@@ -153,7 +153,7 @@ class Downsample(nn.Module):
         return self.op(x)
 
 
-class SPADEGroupNorm(nn.Module):
+class SPADEGroupNorm(nn.Module):#ñ
     def __init__(self, norm_nc, label_nc, eps = 1e-5):
         super().__init__()
 
@@ -162,11 +162,11 @@ class SPADEGroupNorm(nn.Module):
         self.eps = eps
         nhidden = 128
         self.mlp_shared = nn.Sequential(
-            nn.Conv2d(label_nc, nhidden, kernel_size=3, padding=1),
+            nn.Conv3d(label_nc, nhidden, kernel_size=3, padding=1),
             nn.ReLU()
         )
-        self.mlp_gamma = nn.Conv2d(nhidden, norm_nc, kernel_size=3, padding=1)
-        self.mlp_beta = nn.Conv2d(nhidden, norm_nc, kernel_size=3, padding=1)
+        self.mlp_gamma = nn.Conv3d(nhidden, norm_nc, kernel_size=3, padding=1)
+        self.mlp_beta = nn.Conv3d(nhidden, norm_nc, kernel_size=3, padding=1)
 
     def forward(self, x, segmap):
         # Part 1. generate parameter-free normalized activations
@@ -207,7 +207,7 @@ class ResBlock(TimestepBlock):
         out_channels=None,
         use_conv=False,
         use_scale_shift_norm=False,
-        dims=2,
+        dims=3,
         use_checkpoint=False,
         up=False,
         down=False,
@@ -324,7 +324,7 @@ class SDMResBlock(CondTimestepBlock):
         out_channels=None,
         use_conv=False,
         use_scale_shift_norm=False,
-        dims=2,
+        dims=3,
         use_checkpoint=False,
         up=False,
         down=False,
@@ -596,7 +596,7 @@ class UNetModel(nn.Module):
         dropout=0,
         channel_mult=(1, 2, 4, 8),
         conv_resample=True,
-        dims=2,#ññññññññññññññññññññññññññññññññññññññññññññññññ
+        dims=3,
         num_classes=None,
         use_checkpoint=False,
         use_fp16=False,
@@ -810,7 +810,7 @@ class UNetModel(nn.Module):
         emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
 
         if self.num_classes is not None:
-            assert y.shape == (x.shape[0], self.num_classes, x.shape[2], x.shape[3])
+            assert y.shape == (x.shape[0], self.num_classes, x.shape[2], x.shape[3], x.shape[4])
 
         y = y.type(self.dtype)
         h = x.type(self.dtype)
@@ -860,7 +860,7 @@ class EncoderUNetModel(nn.Module):
         dropout=0,
         channel_mult=(1, 2, 4, 8),
         conv_resample=True,
-        dims=2,
+        dims=3,
         use_checkpoint=False,
         use_fp16=False,
         num_heads=1,
