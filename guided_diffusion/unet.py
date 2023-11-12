@@ -596,7 +596,7 @@ class UNetModel(nn.Module):
         dropout=0,
         channel_mult=(1, 2, 4, 8),
         conv_resample=True,
-        dims=2,
+        dims=2,#ññññññññññññññññññññññññññññññññññññññññññññññññ
         num_classes=None,
         use_checkpoint=False,
         use_fp16=False,

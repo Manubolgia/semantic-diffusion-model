@@ -93,6 +93,7 @@ class TrainLoop:
             ]
 
         if th.cuda.is_available():
+            print("Using GPU?: ", th.cuda.is_available())
             self.use_ddp = True
             self.ddp_model = DDP(
                 self.model,

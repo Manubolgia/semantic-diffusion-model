@@ -1,12 +1,14 @@
 import os
 import math
 import random
+import nrrd
 
 from PIL import Image
 import blobfile as bf
 from mpi4py import MPI
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
+
 
 
 def load_data(
@@ -58,6 +60,10 @@ def load_data(
         all_files = _list_image_files_recursively(os.path.join(data_dir, 'train' if is_train else 'test', 'images'))
         classes = _list_image_files_recursively(os.path.join(data_dir, 'train' if is_train else 'test', 'labels'))
         instances = _list_image_files_recursively(os.path.join(data_dir, 'train' if is_train else 'test', 'labels'))
+    elif dataset_mode == 'assoca':
+        all_files = _list_nrrd_files_recursively(os.path.join(data_dir, 'cta', 'training' if is_train else 'validation'))
+        classes = _list_nrrd_files_recursively(os.path.join(data_dir, 'annotation', 'training' if is_train else 'validation'))
+        instances = None  # Assuming no separate instances for medical data    
     else:
         raise NotImplementedError('{} not implemented'.format(dataset_mode))
 
@@ -99,6 +105,16 @@ def _list_image_files_recursively(data_dir):
             results.extend(_list_image_files_recursively(full_path))
     return results
 
+def _list_nrrd_files_recursively(data_dir):
+    results = []
+    for entry in sorted(bf.listdir(data_dir)):
+        full_path = bf.join(data_dir, entry)
+        ext = entry.split(".")[-1]
+        if "." in entry and ext.lower() == "nrrd":
+            results.append(full_path)
+        elif bf.isdir(full_path):
+            results.extend(_list_nrrd_files_recursively(full_path))
+    return results
 
 class ImageDataset(Dataset):
     def __init__(
@@ -184,6 +200,9 @@ class ImageDataset(Dataset):
 
         return np.transpose(arr_image, [2, 0, 1]), out_dict
 
+def read_nrrd(file_path):
+    data, header = nrrd.read(file_path)
+    return data
 
 def resize_arr(pil_list, image_size, keep_aspect=True):
     # We are not on a new enough PIL to support the `reducing_gap`

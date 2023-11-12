@@ -15,19 +15,23 @@ from guided_diffusion.script_util import (
     add_dict_to_argparser,
 )
 from guided_diffusion.train_util import TrainLoop
-
+import torch
 
 def main():
+
     args = create_argparser().parse_args()
 
     dist_util.setup_dist()
-    logger.configure()
+    os.makedirs(args.log_dir, exist_ok=True)
+    logger.configure(dir=args.log_dir)
 
     logger.log("creating model and diffusion...")
     model, diffusion = create_model_and_diffusion(
         **args_to_dict(args, model_and_diffusion_defaults().keys())
     )
     model.to(dist_util.dev())
+
+    
     schedule_sampler = create_named_schedule_sampler(args.schedule_sampler, diffusion)
 
     logger.log("creating data loader...")
@@ -79,7 +83,8 @@ def create_argparser():
         resume_checkpoint="",
         use_fp16=False,
         fp16_scale_growth=1e-3,
-        is_train=True
+        is_train=True,
+        log_dir='./logs'
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()

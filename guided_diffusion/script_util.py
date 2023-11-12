@@ -46,8 +46,8 @@ def model_and_diffusion_defaults():
     """
     res = dict(
         image_size=64,
-        num_classes=151,
-        num_channels=128,
+        num_classes=151,#ñññññññññññññññññññññññññ
+        num_channels=128,#ññññññññ pero esto non é o mesmo que in channels, in channels defineo na chamada a UNET
         num_res_blocks=2,
         num_heads=4,
         num_heads_upsample=-1,
@@ -55,7 +55,7 @@ def model_and_diffusion_defaults():
         attention_resolutions="16,8",
         channel_mult="",
         dropout=0.0,
-        class_cond=False,
+        class_cond=True,
         use_checkpoint=False,
         use_scale_shift_norm=True,
         resblock_updown=False,
@@ -103,7 +103,7 @@ def create_model_and_diffusion(
     model = create_model(
         image_size,
         num_classes,
-        num_channels,
+        num_channels,#ñññññ
         num_res_blocks,
         channel_mult=channel_mult,
         learn_sigma=learn_sigma,
@@ -175,9 +175,9 @@ def create_model(
 
     return UNetModel(
         image_size=image_size,
-        in_channels=3,
-        model_channels=num_channels,
-        out_channels=(3 if not learn_sigma else 6),
+        in_channels=3,#ññññ
+        model_channels=num_channels,#ññññ
+        out_channels=(3 if not learn_sigma else 6),#ñññññ
         num_res_blocks=num_res_blocks,
         attention_resolutions=tuple(attention_ds),
         dropout=dropout,
@@ -406,6 +406,7 @@ def create_gaussian_diffusion(
     timestep_respacing="",
 ):
     betas = gd.get_named_beta_schedule(noise_schedule, steps)
+
     if use_kl:
         loss_type = gd.LossType.RESCALED_KL
     elif rescale_learned_sigmas:

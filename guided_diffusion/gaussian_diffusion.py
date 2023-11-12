@@ -138,9 +138,9 @@ class GaussianDiffusion:
         self.num_timesteps = int(betas.shape[0])
 
         alphas = 1.0 - betas
-        self.alphas_cumprod = np.cumprod(alphas, axis=0)
-        self.alphas_cumprod_prev = np.append(1.0, self.alphas_cumprod[:-1])
-        self.alphas_cumprod_next = np.append(self.alphas_cumprod[1:], 0.0)
+        self.alphas_cumprod = np.cumprod(alphas, axis=0) #(alpha^_)_t
+        self.alphas_cumprod_prev = np.append(1.0, self.alphas_cumprod[:-1]) #(alpha^_)_t-1
+        self.alphas_cumprod_next = np.append(self.alphas_cumprod[1:], 0.0) #(alpha^_)_t+1
         assert self.alphas_cumprod_prev.shape == (self.num_timesteps,)
 
         # calculations for diffusion q(x_t | x_{t-1}) and others
