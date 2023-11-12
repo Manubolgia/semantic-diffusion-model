@@ -46,8 +46,8 @@ def model_and_diffusion_defaults():
     """
     res = dict(
         image_size=64,
-        num_classes=151,#ñññññññññññññññññññññññññ
-        num_channels=128,#ññññññññ pero esto non é o mesmo que in channels, in channels defineo na chamada a UNET
+        num_classes=2, #ñ
+        num_channels=128,
         num_res_blocks=2,
         num_heads=4,
         num_heads_upsample=-1,

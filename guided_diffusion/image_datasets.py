@@ -19,8 +19,8 @@ def load_data(
     image_size,
     class_cond=False,
     deterministic=False,
-    random_crop=True,
-    random_flip=True,
+    random_crop=False, #augmentation
+    random_flip=False,
     is_train=True,
 ):
     """
@@ -44,26 +44,10 @@ def load_data(
     if not data_dir:
         raise ValueError("unspecified data directory")
 
-    if dataset_mode == 'cityscapes':
-        all_files = _list_image_files_recursively(os.path.join(data_dir, 'leftImg8bit', 'train' if is_train else 'val'))
-        labels_file = _list_image_files_recursively(os.path.join(data_dir, 'gtFine', 'train' if is_train else 'val'))
-        classes = [x for x in labels_file if x.endswith('_labelIds.png')]
-        instances = [x for x in labels_file if x.endswith('_instanceIds.png')]
-    elif dataset_mode == 'ade20k':
-        all_files = _list_image_files_recursively(os.path.join(data_dir, 'images', 'training' if is_train else 'validation'))
-        classes = _list_image_files_recursively(os.path.join(data_dir, 'annotations', 'training' if is_train else 'validation'))
-        instances = None
-    elif dataset_mode == 'celeba':
-        # The edge is computed by the instances.
-        # However, the edge get from the labels and the instances are the same on CelebA.
-        # You can take either as instance input
-        all_files = _list_image_files_recursively(os.path.join(data_dir, 'train' if is_train else 'test', 'images'))
-        classes = _list_image_files_recursively(os.path.join(data_dir, 'train' if is_train else 'test', 'labels'))
-        instances = _list_image_files_recursively(os.path.join(data_dir, 'train' if is_train else 'test', 'labels'))
-    elif dataset_mode == 'assoca':
+    if dataset_mode == 'assoca':
         all_files = _list_nrrd_files_recursively(os.path.join(data_dir, 'cta', 'training' if is_train else 'validation'))
         classes = _list_nrrd_files_recursively(os.path.join(data_dir, 'annotation', 'training' if is_train else 'validation'))
-        instances = None  # Assuming no separate instances for medical data    
+        instances = None
     else:
         raise NotImplementedError('{} not implemented'.format(dataset_mode))
 
@@ -93,18 +77,6 @@ def load_data(
     while True:
         yield from loader
 
-
-def _list_image_files_recursively(data_dir):
-    results = []
-    for entry in sorted(bf.listdir(data_dir)):
-        full_path = bf.join(data_dir, entry)
-        ext = entry.split(".")[-1]
-        if "." in entry and ext.lower() in ["jpg", "jpeg", "png", "gif"]:
-            results.append(full_path)
-        elif bf.isdir(full_path):
-            results.extend(_list_image_files_recursively(full_path))
-    return results
-
 def _list_nrrd_files_recursively(data_dir):
     results = []
     for entry in sorted(bf.listdir(data_dir)):
@@ -127,7 +99,7 @@ class ImageDataset(Dataset):
         shard=0,
         num_shards=1,
         random_crop=False,
-        random_flip=True,
+        random_flip=False,
         is_train=True
     ):
         super().__init__()
@@ -144,38 +116,24 @@ class ImageDataset(Dataset):
         return len(self.local_images)
 
     def __getitem__(self, idx):
+        
         path = self.local_images[idx]
-        with bf.BlobFile(path, "rb") as f:
-            pil_image = Image.open(f)
-            pil_image.load()
-        pil_image = pil_image.convert("RGB")
+        nrrd_image = read_nrrd(path) #np array with slices x image size
 
         out_dict = {}
-        class_path = self.local_classes[idx]
-        with bf.BlobFile(class_path, "rb") as f:
-            pil_class = Image.open(f)
-            pil_class.load()
-        pil_class = pil_class.convert("L")
 
-        if self.local_instances is not None:
-            instance_path = self.local_instances[idx] # DEBUG: from classes to instances, may affect CelebA
-            with bf.BlobFile(instance_path, "rb") as f:
-                pil_instance = Image.open(f)
-                pil_instance.load()
-            pil_instance = pil_instance.convert("L")
-        else:
-            pil_instance = None
+        if self.local_classes is not None:
+            class_path = self.local_classes[idx]
+            nrrd_class = read_nrrd(class_path)
 
-        if self.dataset_mode == 'cityscapes':
-            arr_image, arr_class, arr_instance = resize_arr([pil_image, pil_class, pil_instance], self.resolution)
+
+        #if self.is_train:
+        if self.random_crop:
+            arr_image, arr_class, arr_instance = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
         else:
-            if self.is_train:
-                if self.random_crop:
-                    arr_image, arr_class, arr_instance = random_crop_arr([pil_image, pil_class, pil_instance], self.resolution)
-                else:
-                    arr_image, arr_class, arr_instance = center_crop_arr([pil_image, pil_class, pil_instance], self.resolution)
-            else:
-                arr_image, arr_class, arr_instance = resize_arr([pil_image, pil_class, pil_instance], self.resolution, keep_aspect=False)
+            arr_image, arr_class, arr_instance = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
+        #else:
+            #arr_image, arr_class, arr_instance = resize_arr([pil_image, pil_class], self.resolution, keep_aspect=False)
 
         if self.random_flip and random.random() < 0.5:
             arr_image = arr_image[:, ::-1].copy()
@@ -186,19 +144,10 @@ class ImageDataset(Dataset):
 
         out_dict['path'] = path
         out_dict['label_ori'] = arr_class.copy()
+        out_dict['label'] = arr_class[None, ]#ñ
 
-        if self.dataset_mode == 'ade20k':
-            arr_class = arr_class - 1
-            arr_class[arr_class == 255] = 150
-        elif self.dataset_mode == 'coco':
-            arr_class[arr_class == 255] = 182
 
-        out_dict['label'] = arr_class[None, ]
-
-        if arr_instance is not None:
-            out_dict['instance'] = arr_instance[None, ]
-
-        return np.transpose(arr_image, [2, 0, 1]), out_dict
+        return arr_image, out_dict #ñ
 
 def read_nrrd(file_path):
     data, header = nrrd.read(file_path)
@@ -233,65 +182,48 @@ def resize_arr(pil_list, image_size, keep_aspect=True):
     return arr_image, arr_class, arr_instance
 
 
-def center_crop_arr(pil_list, image_size):
-    # We are not on a new enough PIL to support the `reducing_gap`
-    # argument, which uses BOX downsampling at powers of two first.
-    # Thus, we do it by hand to improve downsample quality.
-    pil_image, pil_class, pil_instance = pil_list
+def center_crop_arr(np_list, volume_size):
 
-    while min(*pil_image.size) >= 2 * image_size:
-        pil_image = pil_image.resize(
-            tuple(x // 2 for x in pil_image.size), resample=Image.BOX
-        )
+    np_image, np_class = np_list
 
-    scale = image_size / min(*pil_image.size)
-    pil_image = pil_image.resize(
-        tuple(round(x * scale) for x in pil_image.size), resample=Image.BICUBIC
-    )
+    D, H, W = np_image.shape
+    crop_D, crop_H, crop_W = volume_size
 
-    pil_class = pil_class.resize(pil_image.size, resample=Image.NEAREST)
-    if pil_instance is not None:
-        pil_instance = pil_instance.resize(pil_image.size, resample=Image.NEAREST)
+    # Ensure the crop size is smaller than the image size
+    crop_D = min(crop_D, D)
+    crop_H = min(crop_H, H)
+    crop_W = min(crop_W, W)
 
-    arr_image = np.array(pil_image)
-    arr_class = np.array(pil_class)
-    arr_instance = np.array(pil_instance) if pil_instance is not None else None
-    crop_y = (arr_image.shape[0] - image_size) // 2
-    crop_x = (arr_image.shape[1] - image_size) // 2
-    return arr_image[crop_y : crop_y + image_size, crop_x : crop_x + image_size],\
-           arr_class[crop_y: crop_y + image_size, crop_x: crop_x + image_size],\
-           arr_instance[crop_y : crop_y + image_size, crop_x : crop_x + image_size] if arr_instance is not None else None
+    start_D = (D - crop_D) // 2
+    start_H = (H - crop_H) // 2
+    start_W = (W - crop_W) // 2
 
+    end_D = start_D + crop_D
+    end_H = start_H + crop_H
+    end_W = start_W + crop_W
 
-def random_crop_arr(pil_list, image_size, min_crop_frac=0.8, max_crop_frac=1.0):
-    min_smaller_dim_size = math.ceil(image_size / max_crop_frac)
-    max_smaller_dim_size = math.ceil(image_size / min_crop_frac)
-    smaller_dim_size = random.randrange(min_smaller_dim_size, max_smaller_dim_size + 1)
+    cropped_image = np_image[start_D:end_D, start_H:end_H, start_W:end_W]
+    cropped_class = np_class[start_D:end_D, start_H:end_H, start_W:end_W]
 
-    # We are not on a new enough PIL to support the `reducing_gap`
-    # argument, which uses BOX downsampling at powers of two first.
-    # Thus, we do it by hand to improve downsample quality.
-    pil_image, pil_class, pil_instance = pil_list
+    return cropped_image, cropped_class
 
-    while min(*pil_image.size) >= 2 * smaller_dim_size:
-        pil_image = pil_image.resize(
-            tuple(x // 2 for x in pil_image.size), resample=Image.BOX
-        )
+def random_crop_arr(np_list, volume_size):
+    np_image, np_class = np_list
+    D, H, W = np_image.shape
+    crop_D, crop_H, crop_W = volume_size
 
-    scale = smaller_dim_size / min(*pil_image.size)
-    pil_image = pil_image.resize(
-        tuple(round(x * scale) for x in pil_image.size), resample=Image.BICUBIC
-    )
+    crop_D = min(crop_D, D)
+    crop_H = min(crop_H, H)
+    crop_W = min(crop_W, W)
 
-    pil_class = pil_class.resize(pil_image.size, resample=Image.NEAREST)
-    if pil_instance is not None:
-        pil_instance = pil_instance.resize(pil_image.size, resample=Image.NEAREST)
+    start_D = random.randrange(D - crop_D + 1)
+    start_H = random.randrange(H - crop_H + 1)
+    start_W = random.randrange(W - crop_W + 1)
 
-    arr_image = np.array(pil_image)
-    arr_class = np.array(pil_class)
-    arr_instance = np.array(pil_instance) if pil_instance is not None else None
-    crop_y = random.randrange(arr_image.shape[0] - image_size + 1)
-    crop_x = random.randrange(arr_image.shape[1] - image_size + 1)
-    return arr_image[crop_y : crop_y + image_size, crop_x : crop_x + image_size],\
-           arr_class[crop_y: crop_y + image_size, crop_x: crop_x + image_size],\
-           arr_instance[crop_y : crop_y + image_size, crop_x : crop_x + image_size] if arr_instance is not None else None
+    end_D = start_D + crop_D
+    end_H = start_H + crop_H
+    end_W = start_W + crop_W
+
+    cropped_image = np_image[start_D:end_D, start_H:end_H, start_W:end_W]
+    cropped_class = np_class[start_D:end_D, start_H:end_H, start_W:end_W]
+
