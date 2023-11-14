@@ -224,7 +224,8 @@ class ResBlock(TimestepBlock):
         self.in_layers = nn.Sequential(
             normalization(channels),
             SiLU(),
-            conv_nd(dims, channels, self.out_channels, 3, padding=1),
+            nn.Conv3d(channels,self.out_channels, 3, padding=1),
+            #conv_nd(dims, channels, self.out_channels, 3, padding=1),
         )
 
         self.updown = up or down
