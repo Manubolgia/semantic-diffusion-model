@@ -92,23 +92,35 @@ class TrainLoop:
                 for _ in range(len(self.ema_rate))
             ]
 
+        #if th.cuda.is_available():
+        #    print("Using GPU?: ", th.cuda.is_available())
+        #    self.use_ddp = True
+        #    self.ddp_model = DDP(
+        #        self.model,
+        #        device_ids=[dist_util.dev()],
+        #        output_device=dist_util.dev(),
+        #        broadcast_buffers=False,
+        #        bucket_cap_mb=128,
+        #        find_unused_parameters=False,
+        #    )
+        #else:
+        #    if dist.get_world_size() > 1:
+        #        logger.warn(
+        #            "Distributed training requires CUDA. "
+        #            "Gradients will not be synchronized properly!"
+        #        )
+        #    self.use_ddp = False
+        #    self.ddp_model = self.model
+
         if th.cuda.is_available():
             print("Using GPU?: ", th.cuda.is_available())
-            self.use_ddp = True
-            self.ddp_model = DDP(
-                self.model,
-                device_ids=[dist_util.dev()],
-                output_device=dist_util.dev(),
-                broadcast_buffers=False,
-                bucket_cap_mb=128,
-                find_unused_parameters=False,
-            )
-        else:
+
             if dist.get_world_size() > 1:
                 logger.warn(
                     "Distributed training requires CUDA. "
                     "Gradients will not be synchronized properly!"
                 )
+
             self.use_ddp = False
             self.ddp_model = self.model
 

@@ -153,7 +153,7 @@ class Downsample(nn.Module):
         return self.op(x)
 
 
-class SPADEGroupNorm(nn.Module):#ñ
+class SPADEGroupNorm(nn.Module):
     def __init__(self, norm_nc, label_nc, eps = 1e-5):
         super().__init__()
 

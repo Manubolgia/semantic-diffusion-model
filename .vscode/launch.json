@@ -14,7 +14,7 @@
                 "--batch_size", "1",
                 "--attention_resolutions", "32,16,8",
                 "--diffusion_steps", "100",
-                "--image_size", "16",
+                "--image_size", "64",
                 "--learn_sigma", "True",
                 "--noise_schedule", "linear",
                 "--num_channels", "64",

@@ -7,6 +7,8 @@ Docstrings have been added, as well as DDIM sampling and a new collection of bet
 
 import enum
 import math
+import os
+import nrrd
 
 import numpy as np
 import torch as th
@@ -751,6 +753,19 @@ class GaussianDiffusion:
         # At the first timestep return the decoder NLL,
         # otherwise return KL(q(x_{t-1}|x_t,x_0) || p(x_{t-1}|x_t))
         output = th.where((t == 0), decoder_nll, kl)
+
+        #-----------------------------------------------#
+        logging_directory = "C:/Users/Manuel/Documents/GitHub/pmsd/logs/images_debug"  
+        nrrd_filename_pred = "pred_xstart.nrrd"
+        
+        file_path_pred = os.path.join(logging_directory, nrrd_filename_pred)
+
+        pred_xstart_np = out["pred_xstart"].detach().cpu().numpy().squeeze()
+
+        # Save the numpy array as a NRRD file
+        nrrd.write(file_path_pred, pred_xstart_np)
+        #-----------------------------------------------#
+
         return {"output": output, "pred_xstart": out["pred_xstart"]}
 
     def training_losses(self, model, x_start, t, model_kwargs=None, noise=None):
@@ -772,6 +787,21 @@ class GaussianDiffusion:
             noise = th.randn_like(x_start)
         x_t = self.q_sample(x_start, t, noise=noise)
 
+        #-----------------------------------------------#
+        logging_directory = "C:/Users/Manuel/Documents/GitHub/pmsd/logs/images_debug"  
+        nrrd_filename_start = "real_xstart.nrrd"
+        nrrd_filename_t = "x_t.nrrd"
+        
+        file_path_start = os.path.join(logging_directory, nrrd_filename_start)
+        file_path_t = os.path.join(logging_directory, nrrd_filename_t)
+
+        real_xstart_np = x_start.cpu().numpy().squeeze()
+        xt = x_t.cpu().numpy().squeeze()
+
+        # Save the numpy array as a NRRD file
+        nrrd.write(file_path_start, real_xstart_np)
+        nrrd.write(file_path_t, xt)
+        #-----------------------------------------------#
         terms = {}
 
         if self.loss_type == LossType.KL or self.loss_type == LossType.RESCALED_KL:
