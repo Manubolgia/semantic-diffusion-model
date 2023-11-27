@@ -65,7 +65,7 @@ class TrainLoop:
 
         self.step = 0
         self.resume_step = 0
-        self.global_batch = self.batch_size * dist.get_world_size()
+        self.global_batch = self.batch_size #* dist.get_world_size()
 
         self.sync_cuda = th.cuda.is_available()
 
@@ -115,11 +115,11 @@ class TrainLoop:
         if th.cuda.is_available():
             print("Using GPU?: ", th.cuda.is_available())
 
-            if dist.get_world_size() > 1:
-                logger.warn(
-                    "Distributed training requires CUDA. "
-                    "Gradients will not be synchronized properly!"
-                )
+            #if dist.get_world_size() > 1:
+            #    logger.warn(
+            #        "Distributed training requires CUDA. "
+            #        "Gradients will not be synchronized properly!"
+            #    )
 
             self.use_ddp = False
             self.ddp_model = self.model
@@ -137,7 +137,7 @@ class TrainLoop:
                     )
                 )
 
-        dist_util.sync_params(self.model.parameters())
+        #dist_util.sync_params(self.model.parameters())
 
     def _load_ema_parameters(self, rate):
         ema_params = copy.deepcopy(self.mp_trainer.master_params)
@@ -218,7 +218,8 @@ class TrainLoop:
             )
 
             if last_batch or not self.use_ddp:
-                losses = compute_losses()
+                #losses = compute_losses(step_i=self.step, save_steps_debug=True)
+                losses = compute_losses()#
             else:
                 with self.ddp_model.no_sync():
                     losses = compute_losses()
@@ -253,27 +254,27 @@ class TrainLoop:
     def save(self):
         def save_checkpoint(rate, params):
             state_dict = self.mp_trainer.master_params_to_state_dict(params)
-            if dist.get_rank() == 0:
-                logger.log(f"saving model {rate}...")
-                if not rate:
-                    filename = f"model{(self.step+self.resume_step):06d}.pt"
-                else:
-                    filename = f"ema_{rate}_{(self.step+self.resume_step):06d}.pt"
-                with bf.BlobFile(bf.join(get_blob_logdir(), filename), "wb") as f:
-                    th.save(state_dict, f)
+            #if dist.get_rank() == 0:
+            logger.log(f"saving model {rate}...")
+            if not rate:
+              filename = f"model{(self.step+self.resume_step):06d}.pt"
+            else:
+              filename = f"ema_{rate}_{(self.step+self.resume_step):06d}.pt"
+            with bf.BlobFile(bf.join(get_blob_logdir(), filename), "wb") as f:
+              th.save(state_dict, f)
 
         save_checkpoint(0, self.mp_trainer.master_params)
         for rate, params in zip(self.ema_rate, self.ema_params):
             save_checkpoint(rate, params)
 
-        if dist.get_rank() == 0:
-            with bf.BlobFile(
-                bf.join(get_blob_logdir(), f"opt{(self.step+self.resume_step):06d}.pt"),
-                "wb",
-            ) as f:
-                th.save(self.opt.state_dict(), f)
+        #if dist.get_rank() == 0:
+        with bf.BlobFile(
+          bf.join(get_blob_logdir(), f"opt{(self.step+self.resume_step):06d}.pt"),
+          "wb",
+          ) as f:
+            th.save(self.opt.state_dict(), f)
 
-        dist.barrier()
+        #dist.barrier()
 
     def preprocess_input(self, data):
         # move to GPU and change data types
