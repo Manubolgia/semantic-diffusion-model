@@ -7,6 +7,7 @@ from PIL import Image
 import blobfile as bf
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
+from scipy.ndimage import zoom
 
 
 
@@ -130,7 +131,7 @@ class ImageDataset(Dataset):
         else:
             arr_image, arr_class = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
         #else:
-            #arr_image, arr_class, arr_instance = resize_arr([pil_image, pil_class], self.resolution, keep_aspect=False)
+            #arr_image, arr_class = resize_arr([nrrd_image, nrrd_class], self.resolution)
 
         if self.random_flip and random.random() < 0.5:
             arr_image = arr_image[:, ::-1].copy()
@@ -160,33 +161,25 @@ def read_nrrd(file_path):
     data, header = nrrd.read(file_path)
     return data
 
-def resize_arr(pil_list, image_size, keep_aspect=True):
-    # We are not on a new enough PIL to support the `reducing_gap`
-    # argument, which uses BOX downsampling at powers of two first.
-    # Thus, we do it by hand to improve downsample quality.
-    pil_image, pil_class, pil_instance = pil_list
+def resize_arr(np_list, image_size):
 
-    while min(*pil_image.size) >= 2 * image_size:
-        pil_image = pil_image.resize(
-            tuple(x // 2 for x in pil_image.size), resample=Image.BOX
-        )
+    np_image, np_class = np_list
 
-    if keep_aspect:
-        scale = image_size / min(*pil_image.size)
-        pil_image = pil_image.resize(
-            tuple(round(x * scale) for x in pil_image.size), resample=Image.BICUBIC
-        )
-    else:
-        pil_image = pil_image.resize((image_size, image_size), resample=Image.BICUBIC)
+    def resize_image(image, target_size, resample_method):
 
-    pil_class = pil_class.resize(pil_image.size, resample=Image.NEAREST)
-    if pil_instance is not None:
-        pil_instance = pil_instance.resize(pil_image.size, resample=Image.NEAREST)
+        new_size = (target_size, target_size, target_size)  # Preserve D, resize H and W
 
-    arr_image = np.array(pil_image)
-    arr_class = np.array(pil_class)
-    arr_instance = np.array(pil_instance) if pil_instance is not None else None
-    return arr_image, arr_class, arr_instance
+        # Calculate zoom factors for each dimension
+        zoom_factors = (new_size[0] / image.shape[0], new_size[1] / image.shape[1], new_size[2] / image.shape[2])  # 1 for D, scale H and W
+
+        # Resize using zoom
+        return zoom(image, zoom_factors, order=resample_method)
+
+    arr_image = resize_image(np_image, image_size, 3)
+    arr_class = resize_image(np_class, image_size, 0)
+
+    return arr_image, arr_class
+
 
 
 def center_crop_arr(np_list, volume_size):
