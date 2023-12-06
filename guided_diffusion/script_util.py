@@ -46,7 +46,7 @@ def model_and_diffusion_defaults():
     """
     res = dict(
         image_size=64,
-        num_classes=1,
+        num_classes=2, #Background counts as its own class
         num_channels=128,
         num_res_blocks=2,
         num_heads=4,
@@ -179,7 +179,7 @@ def create_model(
         image_size=image_size,
         in_channels=1,
         model_channels=num_channels,
-        out_channels=(1 if not learn_sigma else 2),#ñññññ
+        out_channels=(1 if not learn_sigma else 2),
         num_res_blocks=num_res_blocks,
         attention_resolutions=tuple(attention_ds),
         dropout=dropout,
