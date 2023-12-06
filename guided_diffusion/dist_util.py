@@ -4,6 +4,8 @@ Helpers for distributed training.
 
 import os
 import torch as th
+import blobfile as bf
+import io
 
 # Adjust this depending on your system setup
 GPUS_PER_NODE = 1
@@ -24,3 +26,15 @@ def dev():
     if th.cuda.is_available():
         return th.device(f"cuda:0")
     return th.device("cpu")
+
+def load_state_dict(path, **kwargs):
+    """
+    Load a PyTorch model state dict from a file.
+    This version is adapted for single GPU setups without MPI.
+    """
+    # Open the file and read the data
+    with bf.BlobFile(path, "rb") as f:
+        data = f.read()
+
+    # Load the state dict from the read data
+    return th.load(io.BytesIO(data), **kwargs)

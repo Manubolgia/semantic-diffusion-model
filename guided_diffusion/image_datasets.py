@@ -19,7 +19,7 @@ def load_data(
     image_size,
     class_cond=False,
     deterministic=False,
-    random_crop=False, #augmentation
+    random_crop=True, #augmentation
     random_flip=False,
     is_train=True,
 ):
@@ -125,13 +125,14 @@ class ImageDataset(Dataset):
             nrrd_class = read_nrrd(class_path)
 
 
-        #if self.is_train:
-        if self.random_crop:
-            arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
+        if self.is_train:
+            if self.random_crop:
+                arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
+            else:
+                arr_image, arr_class = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
         else:
-            arr_image, arr_class = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
-        #else:
-            #arr_image, arr_class = resize_arr([nrrd_image, nrrd_class], self.resolution)
+            arr_image, arr_class = resize_arr([nrrd_image, nrrd_class], self.resolution)
+            #arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
 
         if self.random_flip and random.random() < 0.5:
             arr_image = arr_image[:, ::-1].copy()
@@ -226,4 +227,6 @@ def random_crop_arr(np_list, volume_size):
 
     cropped_image = np_image[start_D:end_D, start_H:end_H, start_W:end_W]
     cropped_class = np_class[start_D:end_D, start_H:end_H, start_W:end_W]
+
+    return cropped_image, cropped_class
 

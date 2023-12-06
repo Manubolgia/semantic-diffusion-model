@@ -6,6 +6,7 @@ numpy array. This can be used to produce samples for FID evaluation.
 import argparse
 import os
 
+import nrrd
 import torch as th
 import torch.distributed as dist
 import torchvision as tv
@@ -63,10 +64,10 @@ def main():
     logger.log("sampling...")
     all_samples = []
     for i, (batch, cond) in enumerate(data):
-        image = ((batch + 1.0) / 2.0).cuda()
-        label = (cond['label_ori'].float() / 255.0).cuda()
+        image = ((batch + 1.0) / 2.0).cuda() #in order to save later, we dont actually use this to sample
+        label = (cond['label_ori'].float()).cuda()# / 255.0).cuda()
         model_kwargs = preprocess_input(cond, num_classes=args.num_classes)
-
+        _, d, h, w = label.size()
         # set hyperparameter
         model_kwargs['s'] = args.s
 
@@ -75,28 +76,45 @@ def main():
         )
         sample = sample_fn(
             model,
-            (args.batch_size, 3, image.shape[2], image.shape[3]),
+            (args.batch_size, 1, d, h, w), #this is used to create the initial noise, so 1 channel and not nclasses channels
             clip_denoised=args.clip_denoised,
             model_kwargs=model_kwargs,
             progress=True
         )
         sample = (sample + 1) / 2.0
 
-        gathered_samples = [th.zeros_like(sample) for _ in range(dist.get_world_size())]
-        dist.all_gather(gathered_samples, sample)  # gather not supported with NCCL
+        gathered_samples = [th.zeros_like(sample)]
+        
         all_samples.extend([sample.cpu().numpy() for sample in gathered_samples])
 
         for j in range(sample.shape[0]):
-            tv.utils.save_image(image[j], os.path.join(image_path, cond['path'][j].split('/')[-1].split('.')[0] + '.png'))
-            tv.utils.save_image(sample[j], os.path.join(sample_path, cond['path'][j].split('/')[-1].split('.')[0] + '.png'))
-            tv.utils.save_image(label[j], os.path.join(label_path, cond['path'][j].split('/')[-1].split('.')[0] + '.png'))
+            #base_filename = cond['path'][j].split('/')[-1].split('.')[0]
+            base_filename = str(len(all_samples) * args.batch_size)
+            # Directories for saving NRRD files
+            nrrd_image_path = os.path.join(image_path, base_filename + '.nrrd')
+            nrrd_sample_path = os.path.join(sample_path, base_filename + '.nrrd')
+            nrrd_label_path = os.path.join(label_path, base_filename + '.nrrd')
+
+            # Ensure directories exist
+            os.makedirs(os.path.dirname(nrrd_image_path), exist_ok=True)
+            os.makedirs(os.path.dirname(nrrd_sample_path), exist_ok=True)
+            os.makedirs(os.path.dirname(nrrd_label_path), exist_ok=True)
+
+            # Convert tensors to numpy arrays and squeeze if necessary
+            np_image = image[j].cpu().numpy().squeeze()
+            np_sample = sample[j].cpu().numpy().squeeze()
+            np_label = label[j].cpu().numpy().squeeze()
+
+            # Save the numpy arrays as NRRD files
+            nrrd.write(nrrd_image_path, np_image)
+            nrrd.write(nrrd_sample_path, np_sample)
+            nrrd.write(nrrd_label_path, np_label)
 
         logger.log(f"created {len(all_samples) * args.batch_size} samples")
 
-        if len(all_samples) * args.batch_size > args.num_samples:
+        if len(all_samples) * args.batch_size >= args.num_samples:
             break
 
-    dist.barrier()
     logger.log("sampling complete")
 
 
@@ -106,8 +124,8 @@ def preprocess_input(data, num_classes):
 
     # create one-hot label map
     label_map = data['label']
-    bs, _, h, w = label_map.size()
-    input_label = th.FloatTensor(bs, num_classes, h, w).zero_()
+    bs, _, d, h, w = label_map.size()
+    input_label = th.FloatTensor(bs, num_classes, d, h, w).zero_()
     input_semantics = input_label.scatter_(1, label_map, 1.0)
 
     # concatenate instance map if it exists
