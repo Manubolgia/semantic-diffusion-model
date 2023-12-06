@@ -129,13 +129,13 @@ class TrainLoop:
 
         if resume_checkpoint:
             self.resume_step = parse_resume_step_from_filename(resume_checkpoint)
-            if dist.get_rank() == 0:
-                logger.log(f"loading model from checkpoint: {resume_checkpoint}...")
-                self.model.load_state_dict(
-                    th.load(
-                        resume_checkpoint, map_location=dist_util.dev()
-                    )
+            #if dist.get_rank() == 0:
+            logger.log(f"loading model from checkpoint: {resume_checkpoint}...")
+            self.model.load_state_dict(
+                th.load(
+                    resume_checkpoint, map_location=dist_util.dev()
                 )
+            )
 
         #dist_util.sync_params(self.model.parameters())
 
@@ -145,14 +145,14 @@ class TrainLoop:
         main_checkpoint = find_resume_checkpoint() or self.resume_checkpoint
         ema_checkpoint = find_ema_checkpoint(main_checkpoint, self.resume_step, rate)
         if ema_checkpoint:
-            if dist.get_rank() == 0:
-                logger.log(f"loading EMA from checkpoint: {ema_checkpoint}...")
-                state_dict = th.load(
-                    ema_checkpoint, map_location=dist_util.dev()
-                )
-                ema_params = self.mp_trainer.state_dict_to_master_params(state_dict)
+            #if dist.get_rank() == 0:
+            logger.log(f"loading EMA from checkpoint: {ema_checkpoint}...")
+            state_dict = th.load(
+                ema_checkpoint, map_location=dist_util.dev()
+            )
+            ema_params = self.mp_trainer.state_dict_to_master_params(state_dict)
 
-        dist_util.sync_params(ema_params)
+        #dist_util.sync_params(ema_params)
         return ema_params
 
     def _load_optimizer_state(self):
@@ -289,17 +289,19 @@ class TrainLoop:
 
         # concatenate instance map if it exists
         if 'instance' in data:
+            #asoca data has no instance so we dont use get_edges
             inst_map = data['instance']
             instance_edge_map = self.get_edges(inst_map)
             input_semantics = th.cat((input_semantics, instance_edge_map), dim=1)
 
         if self.drop_rate > 0.0:
-            mask = (th.rand([input_semantics.shape[0], 1, 1, 1]) > self.drop_rate).float()
+            mask = (th.rand([input_semantics.shape[0], 1, input_semantics.shape[0], 1, 1]) > self.drop_rate).float()
             input_semantics = input_semantics * mask
 
         cond = {key: value for key, value in data.items() if key not in ['label', 'instance', 'path', 'label_ori']}
         cond['y'] = input_semantics
 
+        
         return cond
 
     def get_edges(self, t):
