@@ -126,10 +126,11 @@ class ImageDataset(Dataset):
 
 
         if self.is_train:
-            if self.random_crop:
-                arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
-            else:
-                arr_image, arr_class = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
+            arr_image, arr_class = resize_arr([nrrd_image, nrrd_class], self.resolution)
+            #if self.random_crop:
+            #    arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
+            #else:
+            #    arr_image, arr_class = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
         else:
             arr_image, arr_class = resize_arr([nrrd_image, nrrd_class], self.resolution)
             #arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
@@ -168,10 +169,10 @@ def resize_arr(np_list, image_size):
 
     def resize_image(image, target_size, resample_method):
 
-        new_size = (target_size, target_size, target_size)  # Preserve D, resize H and W
+        new_size = (target_size, target_size, target_size)
 
         # Calculate zoom factors for each dimension
-        zoom_factors = (new_size[0] / image.shape[0], new_size[1] / image.shape[1], new_size[2] / image.shape[2])  # 1 for D, scale H and W
+        zoom_factors = (new_size[0] / image.shape[0], new_size[1] / image.shape[1], new_size[2] / image.shape[2])
 
         # Resize using zoom
         return zoom(image, zoom_factors, order=resample_method)
