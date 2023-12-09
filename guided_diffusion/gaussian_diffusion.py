@@ -431,6 +431,7 @@ class GaussianDiffusion:
                  - 'sample': a random sample from the model.
                  - 'pred_xstart': a prediction of x_0.
         """
+
         out = self.p_mean_variance(
             model,
             x,
@@ -454,6 +455,7 @@ class GaussianDiffusion:
         self,
         model,
         shape,
+        history=False,
         noise=None,
         clip_denoised=True,
         denoised_fn=None,
@@ -482,7 +484,10 @@ class GaussianDiffusion:
         :return: a non-differentiable batch of samples.
         """
         final = None
-        for sample in self.p_sample_loop_progressive(
+        history_list = []
+        save_freq = 10
+        diff_steps = 100
+        for i, sample in enumerate(self.p_sample_loop_progressive(
             model,
             shape,
             noise=noise,
@@ -492,9 +497,13 @@ class GaussianDiffusion:
             model_kwargs=model_kwargs,
             device=device,
             progress=progress,
-        ):
+        )):
+            if history:
+                if i==0 or i==diff_steps-1 or i%save_freq==0:
+                    history_list.append(sample['sample'])
             final = sample
-        return final["sample"]
+  
+        return final["sample"], history_list
 
     def p_sample_loop_progressive(
         self,

@@ -60,6 +60,10 @@ def main():
     os.makedirs(label_path, exist_ok=True)
     sample_path = os.path.join(args.results_path, 'samples')
     os.makedirs(sample_path, exist_ok=True)
+    # Directory for saving history samples
+    if args.history:
+        history_sample_path = os.path.join(args.results_path, 'history_samples')
+        os.makedirs(history_sample_path, exist_ok=True)
 
     logger.log("sampling...")
     all_samples = []
@@ -74,14 +78,17 @@ def main():
         sample_fn = (
             diffusion.p_sample_loop if not args.use_ddim else diffusion.ddim_sample_loop
         )
-        sample = sample_fn(
+        sample, history_list = sample_fn(
             model,
             (args.batch_size, 1, d, h, w), #this is used to create the initial noise, so 1 channel and not nclasses channels
+            args.history,
             clip_denoised=args.clip_denoised,
             model_kwargs=model_kwargs,
-            progress=True
+            progress=False
         )
         sample = (sample + 1) / 2.0
+        for sample_i in history_list:
+            sample_i = (sample_i + 1) / 2.0
 
         gathered_samples = [th.zeros_like(sample)]
         
@@ -109,6 +116,17 @@ def main():
             nrrd.write(nrrd_image_path, np_image)
             nrrd.write(nrrd_sample_path, np_sample)
             nrrd.write(nrrd_label_path, np_label)
+        
+        if args.history:
+            for i, history_sample in enumerate(history_list):
+                # Convert tensor to numpy array and squeeze if necessary
+                np_history_sample = history_sample.cpu().numpy().squeeze()
+
+                # Filename for each sample in history
+                history_filename = os.path.join(history_sample_path, f'history_sample_{i}.nrrd')
+
+                # Save the numpy array as a NRRD file
+                nrrd.write(history_filename, np_history_sample)
 
         logger.log(f"created {len(all_samples) * args.batch_size} samples")
 
@@ -157,7 +175,8 @@ def create_argparser():
         model_path="",
         results_path="",
         is_train=False,
-        s=1.0
+        s=1.0,
+        history=False
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
