@@ -15,7 +15,11 @@ def process_folder_with_totalsegmentator(input_folder, output_folder, task_name)
         if file.endswith('.nii.gz'):
             print(file)
             input_file = input_folder / file
-            output_file = output_folder / ('segmented_' + file)
+            
+            # Extract the number from the input file name
+            number = file.split('.')[0]
+            
+            output_file = output_folder / (number + '.label.nii.gz')
 
             # Call TotalSegmentator for the file
             totalsegmentator(str(input_file), str(output_file), task=task_name, ml=True)
