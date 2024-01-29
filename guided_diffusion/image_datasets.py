@@ -1,7 +1,9 @@
 import os
 import math
 import random
+
 import nrrd
+import nibabel as nib
 
 from PIL import Image
 import blobfile as bf
@@ -19,7 +21,7 @@ def load_data(
     image_size,
     class_cond=False,
     deterministic=False,
-    random_crop=True, #augmentation
+    random_crop=False, #augmentation
     random_flip=False,
     is_train=True,
 ):
@@ -44,9 +46,17 @@ def load_data(
     if not data_dir:
         raise ValueError("unspecified data directory")
 
-    if dataset_mode == 'assoca':
+    if dataset_mode == 'nrrd':
         all_files = _list_nrrd_files_recursively(os.path.join(data_dir, 'cta', 'training' if is_train else 'validation'))
         classes = _list_nrrd_files_recursively(os.path.join(data_dir, 'annotation', 'training' if is_train else 'validation'))
+        instances = None
+    elif dataset_mode == 'nifti':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation', 'training' if is_train else 'validation'))
+        instances = None
+    elif dataset_mode == 'all':
+        all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta', 'training' if is_train else 'validation'))
+        classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation', 'training' if is_train else 'validation'))
         instances = None
     else:
         raise NotImplementedError('{} not implemented'.format(dataset_mode))
@@ -76,6 +86,10 @@ def load_data(
         yield from loader
 
 def _list_nrrd_files_recursively(data_dir):
+    """""
+    List all nrrd files recursively
+        
+    """""
     results = []
     for entry in sorted(bf.listdir(data_dir)):
         full_path = bf.join(data_dir, entry)
@@ -84,6 +98,36 @@ def _list_nrrd_files_recursively(data_dir):
             results.append(full_path)
         elif bf.isdir(full_path):
             results.extend(_list_nrrd_files_recursively(full_path))
+    return results
+
+def _list_nifti_files_recursively(data_dir):
+    """""
+    List all nifti files recursively
+    
+    """""
+    results = []
+    for entry in sorted(bf.listdir(data_dir)):
+        full_path = bf.join(data_dir, entry)
+        ext = entry.split(".")[-1]
+        if "." in entry and ext.lower() == "gz":
+            results.append(full_path)
+        elif bf.isdir(full_path):
+            results.extend(_list_nifti_files_recursively(full_path))
+    return results
+
+def _list_all_files_recursively(data_dir):
+    """""
+    List all nrrd and nifti files recursively
+
+    """""
+    results = []
+    for entry in sorted(bf.listdir(data_dir)):
+        full_path = bf.join(data_dir, entry)
+        ext = entry.split(".")[-1]
+        if "." in entry and (ext.lower() == "nrrd" or ext.lower() == "gz"):
+            results.append(full_path)
+        elif bf.isdir(full_path):
+            results.extend(_list_all_files_recursively(full_path))
     return results
 
 class ImageDataset(Dataset):
@@ -116,23 +160,48 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         
         path = self.local_images[idx]
-        nrrd_image = read_nrrd(path) #np array with slices x image size
+        if self.dataset_mode == 'nrrd':
+            ct_image = read_nrrd(path) 
+        elif self.dataset_mode == 'nifti':
+            ct_image = read_nifti(path)
+        elif self.dataset_mode == 'all':
+            if path.endswith('.nrrd'):
+                ct_image = read_nrrd(path)
+            elif path.endswith('.nii.gz'):
+                ct_image = read_nifti(path)
+            else:
+                raise NotImplementedError('{} not implemented'.format(path))
+        else:
+            raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
 
         out_dict = {}
 
         if self.local_classes is not None:
             class_path = self.local_classes[idx]
-            nrrd_class = read_nrrd(class_path)
+            if self.dataset_mode == 'nrrd':
+                ct_class = read_nrrd(class_path)
+            elif self.dataset_mode == 'nifti':
+                ct_class = read_nifti(class_path)
+            elif self.dataset_mode == 'all':
+                if class_path.endswith('.nrrd'):
+                    ct_class = read_nrrd(class_path)
+                elif class_path.endswith('.nii.gz'):
+                    ct_class = read_nifti(class_path)
+                else:
+                    raise NotImplementedError('{} not implemented'.format(class_path))
+            else:
+                raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
+
 
 
         if self.is_train:
-            arr_image, arr_class = resize_arr([nrrd_image, nrrd_class], self.resolution)
+            arr_image, arr_class = resize_arr([ct_image, ct_class], self.resolution)
             #if self.random_crop:
             #    arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
             #else:
             #    arr_image, arr_class = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
         else:
-            arr_image, arr_class = resize_arr([nrrd_image, nrrd_class], self.resolution)
+            arr_image, arr_class = resize_arr([ct_image, ct_class], self.resolution)
             #arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
 
         if self.random_flip and random.random() < 0.5:
@@ -160,8 +229,19 @@ class ImageDataset(Dataset):
         return arr_image, out_dict 
 
 def read_nrrd(file_path):
+    """
+    Read nrrd file and return numpy array
+    """
     data, header = nrrd.read(file_path)
     return data
+
+def read_nifti(file_path):
+    """
+    Read nifti file and return numpy array, analog to read_nrrd
+    """
+    data = nib.load(file_path).get_fdata()
+    return data
+
 
 def resize_arr(np_list, image_size):
 
