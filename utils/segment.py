@@ -13,11 +13,12 @@ def process_folder_with_totalsegmentator(input_folder, output_folder, task_name)
     # Process each NIfTI file in the input folder
     for file in os.listdir(input_folder):
         if file.endswith('.nii.gz'):
-            print(file)
+            
             input_file = input_folder / file
             
             # Extract the number from the input file name
             number = file.split('.')[0]
+            print(number)
             
             output_file = output_folder / (number + '.label.nii.gz')
 
