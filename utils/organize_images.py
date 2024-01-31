@@ -1,21 +1,31 @@
 import os
 import shutil
+from random import shuffle
 
-# Define the source directory
-source_dir = '/c:/Users/Manuel/Documents/GitHub/pmsd/utils/organize_images.py'
+# Define the paths for the main folders
+main_folders = ['cta', 'annotation']
 
-# Define the destination directories
-cta_dir = '/c:/Users/Manuel/Documents/GitHub/pmsd/utils/cta'
-annotations_dir = '/c:/Users/Manuel/Documents/GitHub/pmsd/utils/annotations_coronaries'
+# Number of validation images
+num_validation = 50
 
-# Iterate over the numbers from 1 to 800
-for number in range(1, 801):
-    # Define the image file paths
-    img_path = os.path.join(source_dir, f'{number}.img.nii.gz')
-    label_path = os.path.join(source_dir, f'{number}.label.nii.gz')
+# Create training and validation folders inside each main folder
+for folder in main_folders:
+    for sub_folder in ['training', 'validation']:
+        os.makedirs(os.path.join(folder, sub_folder), exist_ok=True)
 
-    # Move the image file to the cta directory
-    shutil.move(img_path, cta_dir)
+    # List all files in the main folder
+    all_files = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+    shuffle(all_files)  # Shuffle the files to ensure randomness
 
-    # Move the label file to the annotations_coronaries directory
-    shutil.move(label_path, annotations_dir)
+    # Split files into training and validation
+    validation_files = all_files[:num_validation]
+    training_files = all_files[num_validation:]
+
+    # Move files to their respective folders
+    for file in validation_files:
+        shutil.move(os.path.join(folder, file), os.path.join(folder, 'validation', file))
+
+    for file in training_files:
+        shutil.move(os.path.join(folder, file), os.path.join(folder, 'training', file))
+
+print("Files have been organized into training and validation folders.")
