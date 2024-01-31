@@ -154,6 +154,19 @@ class ImageDataset(Dataset):
         self.random_crop = random_crop
         self.random_flip = random_flip
 
+    def get_affine(self):
+        if self.dataset_mode == 'nrrd':
+            return np.eye(4)
+        elif self.dataset_mode == 'nifti':
+            return read_affine(self.local_images[0])
+        elif self.dataset_mode == 'all':
+            if self.local_images[0].endswith('.nrrd'):
+                return np.eye(4)
+            elif self.local_images[0].endswith('.nii.gz'):
+                return read_affine(self.local_images[0])
+            else:
+                raise NotImplementedError('{} not implemented'.format(self.local_images[0]))
+    
     def __len__(self):
         return len(self.local_images)
 
@@ -242,6 +255,12 @@ def read_nifti(file_path):
     data = nib.load(file_path).get_fdata()
     return data
 
+def read_affine(file_path):
+    """
+    Read nifti file and return numpy array, analog to read_nrrd
+    """
+    affine = nib.load(file_path).affine
+    return affine
 
 def resize_arr(np_list, image_size):
 

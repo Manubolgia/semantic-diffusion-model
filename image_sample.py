@@ -7,6 +7,9 @@ import argparse
 import os
 
 import nrrd
+import nibabel as nib
+import numpy as np
+
 import torch as th
 import torch.distributed as dist
 import torchvision as tv
@@ -14,6 +17,7 @@ import torchvision as tv
 from guided_diffusion.image_datasets import load_data
 
 from guided_diffusion import dist_util, logger
+import glob
 from guided_diffusion.script_util import (
     model_and_diffusion_defaults,
     create_model_and_diffusion,
@@ -98,14 +102,14 @@ def main():
             #base_filename = cond['path'][j].split('/')[-1].split('.')[0]
             base_filename = str(len(all_samples) * args.batch_size)
             # Directories for saving NRRD files
-            nrrd_image_path = os.path.join(image_path, base_filename + '.nrrd')
-            nrrd_sample_path = os.path.join(sample_path, base_filename + '.nrrd')
-            nrrd_label_path = os.path.join(label_path, base_filename + '.nrrd')
+            file_image_path = os.path.join(image_path, base_filename + '.nrrd')
+            file_sample_path = os.path.join(sample_path, base_filename + '.nrrd')
+            file_label_path = os.path.join(label_path, base_filename + '.nrrd')
 
             # Ensure directories exist
-            os.makedirs(os.path.dirname(nrrd_image_path), exist_ok=True)
-            os.makedirs(os.path.dirname(nrrd_sample_path), exist_ok=True)
-            os.makedirs(os.path.dirname(nrrd_label_path), exist_ok=True)
+            os.makedirs(os.path.dirname(file_image_path), exist_ok=True)
+            os.makedirs(os.path.dirname(file_sample_path), exist_ok=True)
+            os.makedirs(os.path.dirname(file_label_path), exist_ok=True)
 
             # Convert tensors to numpy arrays and squeeze if necessary
             np_image = image[j].cpu().numpy().squeeze()
@@ -113,9 +117,27 @@ def main():
             np_label = label[j].cpu().numpy().squeeze()
 
             # Save the numpy arrays as NRRD files
-            nrrd.write(nrrd_image_path, np_image)
-            nrrd.write(nrrd_sample_path, np_sample)
-            nrrd.write(nrrd_label_path, np_label)
+            if args.dataset_mode == 'nrdd':
+                nrrd.write(file_image_path, np_image)
+                nrrd.write(file_sample_path, np_sample)
+                nrrd.write(file_label_path, np_label)
+            elif args.dataset_mode == 'nifti':
+                affine = get_affine(args.dataset_mode, args.data_dir)
+                nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
+                nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
+                nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
+            elif args.dataset_mode == 'all':
+                if cond['path'][j].endswith('.nrrd'):
+                    nrrd.write(file_image_path, np_image)
+                    nrrd.write(file_sample_path, np_sample)
+                    nrrd.write(file_label_path, np_label)
+                elif cond['path'][j].endswith('.nii.gz'):
+                    affine = get_affine(args.dataset_mode, args.data_dir)
+                    nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
+                    nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
+                    nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
+            else:
+                raise ValueError(f"Invalid dataset mode: {args.dataset_mode}")
         
         if args.history:
             for i, history_sample in enumerate(history_list):
@@ -162,6 +184,24 @@ def get_edges(t):
     edge[:, :, 1:, :] = edge[:, :, 1:, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
     edge[:, :, :-1, :] = edge[:, :, :-1, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
     return edge.float()
+
+def get_affine(dataset_mode, data_dir):
+    """
+    Get affine matrix of dataset by nib loading the first image of the directory.
+    If the dataset_mode is nrrd return eye(4) as affine matrix.
+    """
+    if dataset_mode == 'nrrd':
+        affine = np.eye(4)
+    elif dataset_mode == 'nifti':
+        for file_name in os.listdir(os.path.join(data_dir, 'cta', 'validation')):
+            if file_name.endswith('.nii') or file_name.endswith('.nii.gz'):
+                first_image_path = os.path.join(data_dir, 'cta', 'validation', file_name)
+                first_image = nib.load(first_image_path)
+                affine = first_image.affine
+                break
+    else:
+        raise ValueError(f"Invalid dataset mode: {dataset_mode}")
+    return affine
 
 
 def create_argparser():
