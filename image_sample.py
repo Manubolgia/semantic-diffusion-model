@@ -85,10 +85,10 @@ def main():
         sample, history_list = sample_fn(
             model,
             (args.batch_size, 1, d, h, w), #this is used to create the initial noise, so 1 channel and not nclasses channels
-            args.history,
+            args.history, #saving intermediate samples
             clip_denoised=args.clip_denoised,
             model_kwargs=model_kwargs,
-            progress=False
+            progress=False #loading animation
         )
         sample = (sample + 1) / 2.0
         for sample_i in history_list:
