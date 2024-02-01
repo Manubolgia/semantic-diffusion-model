@@ -72,6 +72,9 @@ def main():
     logger.log("sampling...")
     all_samples = []
     for i, (batch, cond) in enumerate(data):
+        image_path = cond['path']
+        print(image_path)
+        raise ValueError
         image = ((batch + 1.0) / 2.0).cuda() #in order to save later, we dont actually use this to sample
         label = (cond['label_ori'].float()).cuda()# / 255.0).cuda()
         model_kwargs = preprocess_input(cond, num_classes=args.num_classes)
