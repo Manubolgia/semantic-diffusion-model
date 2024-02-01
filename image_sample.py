@@ -72,7 +72,7 @@ def main():
     logger.log("sampling...")
     all_samples = []
     for i, (batch, cond) in enumerate(data):
-        image_path = cond['path'][0]
+        affine_path = cond['path']
 
         image = ((batch + 1.0) / 2.0).cuda() #in order to save later, we dont actually use this to sample
         label = (cond['label_ori'].float()).cuda()# / 255.0).cuda()
@@ -101,12 +101,18 @@ def main():
         all_samples.extend([sample.cpu().numpy() for sample in gathered_samples])
 
         for j in range(sample.shape[0]):
-            #base_filename = cond['path'][j].split('/')[-1].split('.')[0]
-            base_filename = str(len(all_samples) * args.batch_size)
-            # Directories for saving NRRD files
-            file_image_path = os.path.join(image_path, base_filename + '.nrrd')
-            file_sample_path = os.path.join(sample_path, base_filename + '.nrrd')
-            file_label_path = os.path.join(label_path, base_filename + '.nrrd')
+            base_filename = cond['path'][j].split('/')[-1].split('.')[0]
+            #base_filename = str(len(all_samples) * args.batch_size)
+            if args.dataset_mode == 'nrrd':
+                # Directories for saving NRRD files
+                file_image_path = os.path.join(image_path, base_filename + '.nrrd')
+                file_sample_path = os.path.join(sample_path, base_filename + '.nrrd')
+                file_label_path = os.path.join(label_path, base_filename + '.nrrd')
+            elif args.dataset_mode == 'nifti':
+                # Directories for saving NIFTI files
+                file_image_path = os.path.join(image_path, base_filename + '.nii.gz')
+                file_sample_path = os.path.join(sample_path, base_filename + '.nii.gz')
+                file_label_path = os.path.join(label_path, base_filename + '.nii.gz')
 
             # Ensure directories exist
             os.makedirs(os.path.dirname(file_image_path), exist_ok=True)
@@ -124,7 +130,7 @@ def main():
                 nrrd.write(file_sample_path, np_sample)
                 nrrd.write(file_label_path, np_label)
             elif args.dataset_mode == 'nifti':
-                affine = get_affine(args.dataset_mode, image_path)
+                affine = get_affine(args.dataset_mode, affine_path[j])
                 nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
                 nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
                 nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
@@ -134,7 +140,7 @@ def main():
                     nrrd.write(file_sample_path, np_sample)
                     nrrd.write(file_label_path, np_label)
                 elif cond['path'][j].endswith('.nii.gz'):
-                    affine = get_affine(args.dataset_mode, image_path)
+                    affine = get_affine(args.dataset_mode, affine_path[j])
                     nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
                     nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
                     nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
