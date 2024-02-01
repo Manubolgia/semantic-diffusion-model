@@ -72,9 +72,8 @@ def main():
     logger.log("sampling...")
     all_samples = []
     for i, (batch, cond) in enumerate(data):
-        image_path = cond['path']
-        print(image_path)
-        raise ValueError
+        image_path = cond['path'][0]
+
         image = ((batch + 1.0) / 2.0).cuda() #in order to save later, we dont actually use this to sample
         label = (cond['label_ori'].float()).cuda()# / 255.0).cuda()
         model_kwargs = preprocess_input(cond, num_classes=args.num_classes)
@@ -125,7 +124,7 @@ def main():
                 nrrd.write(file_sample_path, np_sample)
                 nrrd.write(file_label_path, np_label)
             elif args.dataset_mode == 'nifti':
-                affine = get_affine(args.dataset_mode, args.data_dir)
+                affine = get_affine(args.dataset_mode, image_path)
                 nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
                 nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
                 nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
@@ -135,7 +134,7 @@ def main():
                     nrrd.write(file_sample_path, np_sample)
                     nrrd.write(file_label_path, np_label)
                 elif cond['path'][j].endswith('.nii.gz'):
-                    affine = get_affine(args.dataset_mode, args.data_dir)
+                    affine = get_affine(args.dataset_mode, image_path)
                     nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
                     nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
                     nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
@@ -188,7 +187,7 @@ def get_edges(t):
     edge[:, :, :-1, :] = edge[:, :, :-1, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
     return edge.float()
 
-def get_affine(dataset_mode, data_dir):
+def get_affine(dataset_mode, image_path):
     """
     Get affine matrix of dataset by nib loading the first image of the directory.
     If the dataset_mode is nrrd return eye(4) as affine matrix.
@@ -196,12 +195,8 @@ def get_affine(dataset_mode, data_dir):
     if dataset_mode == 'nrrd':
         affine = np.eye(4)
     elif dataset_mode == 'nifti':
-        for file_name in os.listdir(os.path.join(data_dir, 'cta', 'validation')):
-            if file_name.endswith('.nii') or file_name.endswith('.nii.gz'):
-                first_image_path = os.path.join(data_dir, 'cta', 'validation', file_name)
-                first_image = nib.load(first_image_path)
-                affine = first_image.affine
-                break
+        img = nib.load(image_path)
+        affine = img.affine
     else:
         raise ValueError(f"Invalid dataset mode: {dataset_mode}")
     return affine
