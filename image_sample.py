@@ -149,19 +149,20 @@ def main():
         
         if args.history:
             for j in range(args.batch_size):
+                base_filename = cond['path'][j].split('/')[-1].split('.')[0]
                 for i, history_sample in enumerate(history_list):
                     # Convert tensor to numpy array and squeeze if necessary
                     np_history_sample = history_sample.cpu().numpy().squeeze()
 
                     if args.dataset_mode == 'nrrd':
                         # Filename for each sample in history
-                        history_filename = os.path.join(history_sample_path, f'history_sample_{i}.nrrd')
+                        history_filename = os.path.join(history_sample_path, f'{base_filename}_history_sample_{i}.nrrd')
 
                         # Save the numpy array as a NRRD file
                         nrrd.write(history_filename, np_history_sample)
                     elif args.dataset_mode == 'nifti':
                         # Filename for each sample in history
-                        history_filename = os.path.join(history_sample_path, f'history_sample_{i}.nii.gz')
+                        history_filename = os.path.join(history_sample_path, f'{base_filename}_history_sample_{i}.nii.gz')
 
                         # Save the numpy array as a NIFTI file
                         affine = get_affine(args.dataset_mode, affine_path[j])
