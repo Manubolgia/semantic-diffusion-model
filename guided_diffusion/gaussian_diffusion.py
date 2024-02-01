@@ -485,8 +485,8 @@ class GaussianDiffusion:
         """
         final = None
         history_list = []
-        save_freq = 10
-        diff_steps = 100
+        save_freq = 25
+        diff_steps = 300
         for i, sample in enumerate(self.p_sample_loop_progressive(
             model,
             shape,

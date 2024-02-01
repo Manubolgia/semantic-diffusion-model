@@ -148,15 +148,24 @@ def main():
                 raise ValueError(f"Invalid dataset mode: {args.dataset_mode}")
         
         if args.history:
-            for i, history_sample in enumerate(history_list):
-                # Convert tensor to numpy array and squeeze if necessary
-                np_history_sample = history_sample.cpu().numpy().squeeze()
+            for j in range(args.batch_size):
+                for i, history_sample in enumerate(history_list):
+                    # Convert tensor to numpy array and squeeze if necessary
+                    np_history_sample = history_sample.cpu().numpy().squeeze()
 
-                # Filename for each sample in history
-                history_filename = os.path.join(history_sample_path, f'history_sample_{i}.nrrd')
+                    if args.dataset_mode == 'nrrd':
+                        # Filename for each sample in history
+                        history_filename = os.path.join(history_sample_path, f'history_sample_{i}.nrrd')
 
-                # Save the numpy array as a NRRD file
-                nrrd.write(history_filename, np_history_sample)
+                        # Save the numpy array as a NRRD file
+                        nrrd.write(history_filename, np_history_sample)
+                    elif args.dataset_mode == 'nifti':
+                        # Filename for each sample in history
+                        history_filename = os.path.join(history_sample_path, f'history_sample_{i}.nii.gz')
+
+                        # Save the numpy array as a NIFTI file
+                        affine = get_affine(args.dataset_mode, affine_path[j])
+                        nib.save(nib.Nifti1Image(np_history_sample, affine), history_filename)
 
         logger.log(f"created {len(all_samples) * args.batch_size} samples")
 
