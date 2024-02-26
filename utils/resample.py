@@ -65,9 +65,12 @@ if __name__ == "__main__":
 
     target_size = calculate_target_size(all_images, new_spacing)
 
+    print(f"Target size: {target_size}")
+
     for set_type in sets:
         image_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'cta', set_type))
         label_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation_dilated', set_type))
         
         for image_path, label_path in zip(image_paths, label_paths):
             process_images(image_path, label_path, target_size, new_spacing, args.crop_dims, args.data_folder)
+            print(f"Processed: {image_path}, {label_path}")
