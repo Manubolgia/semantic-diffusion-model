@@ -206,15 +206,18 @@ class ImageDataset(Dataset):
                 raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
 
 
-
-        if self.is_train:
+        if ct_image.shape[0] != self.resolution:
             arr_image, arr_class = resize_arr([ct_image, ct_class], self.resolution)
+        else:
+            arr_image = ct_image
+            arr_class = ct_class
+
+        #if self.is_train:
             #if self.random_crop:
             #    arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
             #else:
             #    arr_image, arr_class = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
-        else:
-            arr_image, arr_class = resize_arr([ct_image, ct_class], self.resolution)
+        #else:
             #arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
 
         if self.random_flip and random.random() < 0.5:
