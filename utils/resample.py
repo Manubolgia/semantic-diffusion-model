@@ -31,7 +31,7 @@ def process_images(cta_path, annotation_path, target_size, new_spacing, crop_dim
                 "image": tio.ScalarImage(cta_path),
                 "label": tio.LabelMap(annotation_path)
             })
-
+            
             resampled_subject = tio.Resample(new_spacing)(subject)
             crop_or_pad = tio.CropOrPad((target_size, target_size, target_size))
             processed_subject = crop_or_pad(resampled_subject)
@@ -59,17 +59,20 @@ if __name__ == "__main__":
     categories = ['cta', 'annotation_dilated']
     sets = ['training', 'validation']
 
-    all_images = []
-    for set_type in sets:
-            all_images.extend(_list_nifti_files_recursively(os.path.join(args.data_folder, 'cta', set_type)))
+    #all_images = []
+    #for set_type in sets:
+    #        all_images.extend(_list_nifti_files_recursively(os.path.join(args.data_folder, 'cta', set_type)))
 
-    target_size = calculate_target_size(all_images, new_spacing)
-
-    print(f"Target size: {target_size}")
+    #target_size = calculate_target_size(all_images, new_spacing)
+    target_size = 201
 
     for set_type in sets:
         image_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'cta', set_type))
         label_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation_dilated', set_type))
+
+        # Order the paths
+        image_paths.sort()
+        label_paths.sort()
         
         for image_path, label_path in zip(image_paths, label_paths):
             process_images(image_path, label_path, target_size, new_spacing, args.crop_dims, args.data_folder)
