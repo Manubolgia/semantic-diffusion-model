@@ -124,28 +124,14 @@ def main():
             np_sample = sample[j].cpu().numpy().squeeze()
             np_label = label[j].cpu().numpy().squeeze()
 
-            # Save the numpy arrays as NRRD files
-            if args.dataset_mode == 'nrdd':
-                nrrd.write(file_image_path, np_image)
-                nrrd.write(file_sample_path, np_sample)
-                nrrd.write(file_label_path, np_label)
-            elif args.dataset_mode == 'nifti':
-                affine = get_affine(args.dataset_mode, affine_path[j])
-                nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
-                nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
-                nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
-            elif args.dataset_mode == 'all':
-                if cond['path'][j].endswith('.nrrd'):
-                    nrrd.write(file_image_path, np_image)
-                    nrrd.write(file_sample_path, np_sample)
-                    nrrd.write(file_label_path, np_label)
-                elif cond['path'][j].endswith('.nii.gz'):
-                    affine = get_affine(args.dataset_mode, affine_path[j])
-                    nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
-                    nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
-                    nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
-            else:
-                raise ValueError(f"Invalid dataset mode: {args.dataset_mode}")
+
+            affine = get_affine(args.dataset_mode, affine_path[j])
+            #save as 16 bit integer
+
+            #nib.save(nib.Nifti1Image(np_image.astype(np.int16), affine), file_image_path)
+            nib.save(nib.Nifti1Image(np_sample.astype(np.int16), affine), file_sample_path)
+            #nib.save(nib.Nifti1Image(np_label.astype(np.int16), affine), file_label_path)
+
         
         if args.history:
             for j in range(args.batch_size):
@@ -154,19 +140,13 @@ def main():
                     # Convert tensor to numpy array and squeeze if necessary
                     np_history_sample = history_sample.cpu().numpy().squeeze()
 
-                    if args.dataset_mode == 'nrrd':
-                        # Filename for each sample in history
-                        history_filename = os.path.join(history_sample_path, f'{base_filename}_history_sample_{i}.nrrd')
 
-                        # Save the numpy array as a NRRD file
-                        nrrd.write(history_filename, np_history_sample)
-                    elif args.dataset_mode == 'nifti':
-                        # Filename for each sample in history
-                        history_filename = os.path.join(history_sample_path, f'{base_filename}_history_sample_{i}.nii.gz')
+                    # Filename for each sample in history
+                    history_filename = os.path.join(history_sample_path, f'{base_filename}_history_sample_{i}.nii.gz')
 
-                        # Save the numpy array as a NIFTI file
-                        affine = get_affine(args.dataset_mode, affine_path[j])
-                        nib.save(nib.Nifti1Image(np_history_sample, affine), history_filename)
+                    # Save the numpy array as a NIFTI file
+                    affine = get_affine(args.dataset_mode, affine_path[j])
+                    nib.save(nib.Nifti1Image(np_history_sample.astype(np.int16), affine), history_filename)
 
         logger.log(f"created {len(all_samples) * args.batch_size} samples")
 
