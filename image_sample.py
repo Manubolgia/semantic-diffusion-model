@@ -126,10 +126,10 @@ def main():
 
 
             affine = get_affine(args.dataset_mode, affine_path[j])
-            #save as 16 bit integer
+            
 
             #nib.save(nib.Nifti1Image(np_image.astype(np.int16), affine), file_image_path)
-            nib.save(nib.Nifti1Image(np_sample.astype(np.int16), affine), file_sample_path)
+            nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
             #nib.save(nib.Nifti1Image(np_label.astype(np.int16), affine), file_label_path)
 
         
