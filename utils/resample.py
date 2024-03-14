@@ -36,7 +36,7 @@ def process_images(cta_path, annotation_path, target_size, new_spacing, crop_dim
             min_intensity_value = image_tensor.min().item()
             
             resampled_subject = tio.Resample(new_spacing)(subject)
-            crop_or_pad = tio.CropOrPad((target_size, target_size, target_size), padding_mode='constant', padding_value=min_intensity_value)
+            crop_or_pad = tio.CropOrPad((target_size, target_size, target_size), padding_mode=min_intensity_value)
             processed_subject = crop_or_pad(resampled_subject)
 
             # Resize to 64^3
