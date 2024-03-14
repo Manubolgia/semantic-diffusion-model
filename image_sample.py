@@ -146,7 +146,7 @@ def main():
 
                     # Save the numpy array as a NIFTI file
                     affine = get_affine(args.dataset_mode, affine_path[j])
-                    nib.save(nib.Nifti1Image(np_history_sample.astype(np.int16), affine), history_filename)
+                    nib.save(nib.Nifti1Image(np_history_sample, affine), history_filename)
 
         logger.log(f"created {len(all_samples) * args.batch_size} samples")
 
