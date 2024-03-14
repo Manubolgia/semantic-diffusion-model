@@ -25,15 +25,18 @@ def calculate_target_size(files, new_spacing):
     return target_size
 
 
-def process_images(cta_path, annotation_path, target_size, new_spacing, crop_dims, base_data_folder):
+def process_images(cta_path, annotation_path, target_size, new_spacing, crop_dims):
     
             subject = tio.Subject({
                 "image": tio.ScalarImage(cta_path),
                 "label": tio.LabelMap(annotation_path)
             })
             
+            image_tensor = subject['image'][tio.DATA]
+            min_intensity_value = image_tensor.min().item()
+            
             resampled_subject = tio.Resample(new_spacing)(subject)
-            crop_or_pad = tio.CropOrPad((target_size, target_size, target_size))
+            crop_or_pad = tio.CropOrPad((target_size, target_size, target_size), padding_mode='constant', padding_value=min_intensity_value)
             processed_subject = crop_or_pad(resampled_subject)
 
             # Resize to 64^3
@@ -75,5 +78,5 @@ if __name__ == "__main__":
         label_paths.sort()
         
         for image_path, label_path in zip(image_paths, label_paths):
-            process_images(image_path, label_path, target_size, new_spacing, args.crop_dims, args.data_folder)
+            process_images(image_path, label_path, target_size, new_spacing, args.crop_dims)
             print(f"Processed: {image_path}, {label_path}")
