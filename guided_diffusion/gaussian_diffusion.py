@@ -29,7 +29,7 @@ def get_named_beta_schedule(schedule_name, num_diffusion_timesteps):
     if schedule_name == "linear":
         # Linear schedule from Ho et al, extended to work for any number of
         # diffusion steps.
-        scale = 1500 / num_diffusion_timesteps
+        scale = 1000 / num_diffusion_timesteps
         beta_start = scale * 0.0001
         beta_end = scale * 0.02
         return np.linspace(
@@ -43,11 +43,16 @@ def get_named_beta_schedule(schedule_name, num_diffusion_timesteps):
         )
     elif schedule_name == "sigmoid":
         scale = 1500 / num_diffusion_timesteps
-        start=0.0001 * scale
-        end=0.02 * scale
-        t = np.linspace(-4, 10, num_diffusion_timesteps)
-        return start + (end-start) / (1 + np.exp(-t))
 
+        start=0.0001 * scale
+        end=0.025 * scale
+        sigmoid_range = end - start
+
+        t = np.linspace(-6, 6, num_diffusion_timesteps)
+
+        beta_schedule = start + sigmoid_range / (1 + np.exp(-t))
+        
+        return beta_schedule
     else:
         raise NotImplementedError(f"unknown beta schedule: {schedule_name}")
 
