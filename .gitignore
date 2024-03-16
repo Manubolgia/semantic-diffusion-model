@@ -46,3 +46,5 @@ test/data/legacy_serialized.pt
 data/
 logs/
 sdm.yml
+script_file
+script_test
