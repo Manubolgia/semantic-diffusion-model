@@ -47,16 +47,16 @@ def load_data(
         raise ValueError("unspecified data directory")
 
     if dataset_mode == 'nrrd':
-        all_files = _list_nrrd_files_recursively(os.path.join(data_dir, 'cta', 'training' if is_train else 'validation'))
-        classes = _list_nrrd_files_recursively(os.path.join(data_dir, 'annotation', 'training' if is_train else 'validation'))
+        all_files = _list_nrrd_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
+        classes = _list_nrrd_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
         instances = None
     elif dataset_mode == 'nifti':
-        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta', 'training' if is_train else 'validation'))
-        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation', 'training' if is_train else 'validation'))
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
         instances = None
     elif dataset_mode == 'all':
-        all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta', 'training' if is_train else 'validation'))
-        classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation', 'training' if is_train else 'validation'))
+        all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
+        classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
         instances = None
     else:
         raise NotImplementedError('{} not implemented'.format(dataset_mode))
