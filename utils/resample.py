@@ -32,7 +32,8 @@ def process_images(cta_path, annotation_path, target_size, new_spacing, crop_dim
         "label": tio.LabelMap(annotation_path)
     })
     
-    min_intensity_value = subject['image'][tio.DATA].min().item()
+    #min_intensity_value = subject['image'][tio.DATA].min().item()
+    min_intensity_value = -1024
     
     # Apply resampling and cropping/padding
     resampled_subject = tio.Resample(new_spacing)(subject)
