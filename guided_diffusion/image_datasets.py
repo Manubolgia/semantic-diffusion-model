@@ -54,6 +54,10 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
         instances = None
+    elif dataset_mode == 'nifti_hr':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr', 'training' if is_train else 'validation'))
+        instances = None    
     elif dataset_mode == 'all':
         all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
@@ -157,7 +161,7 @@ class ImageDataset(Dataset):
     def get_affine(self):
         if self.dataset_mode == 'nrrd':
             return np.eye(4)
-        elif self.dataset_mode == 'nifti':
+        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
             return read_affine(self.local_images[0])
         elif self.dataset_mode == 'all':
             if self.local_images[0].endswith('.nrrd'):
@@ -175,7 +179,7 @@ class ImageDataset(Dataset):
         path = self.local_images[idx]
         if self.dataset_mode == 'nrrd':
             ct_image = read_nrrd(path) 
-        elif self.dataset_mode == 'nifti':
+        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
             ct_image = read_nifti(path)
         elif self.dataset_mode == 'all':
             if path.endswith('.nrrd'):
@@ -193,7 +197,7 @@ class ImageDataset(Dataset):
             class_path = self.local_classes[idx]
             if self.dataset_mode == 'nrrd':
                 ct_class = read_nrrd(class_path)
-            elif self.dataset_mode == 'nifti':
+            elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
                 ct_class = read_nifti(class_path)
             elif self.dataset_mode == 'all':
                 if class_path.endswith('.nrrd'):
