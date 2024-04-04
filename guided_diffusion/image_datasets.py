@@ -236,7 +236,8 @@ class ImageDataset(Dataset):
         max_val = arr_image.max()
 
         # Normalize to [0, 1]
-        arr_image = (arr_image - min_val) / (max_val - min_val)
+        if max_val != min_val:
+            arr_image = (arr_image - min_val) / (max_val - min_val)
 
         # Scale to [-1, 1]
         arr_image = 2 * arr_image - 1
