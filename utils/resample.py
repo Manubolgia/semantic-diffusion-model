@@ -15,17 +15,17 @@ def _list_nifti_files_recursively(data_dir):
 def calculate_target_size(files, new_spacing):
     depths = []
     for file_path in files:
-        if 'annotation' in file_path:
+        if 'cta' in file_path:
             continue
         image = tio.ScalarImage(file_path)
         resampled_image = tio.Resample(new_spacing)(image)
-        depths.append(resampled_image.shape[2])  # Depth is the third dimension
+        depths.append(np.min(resampled_image.shape[1:]))  # Depth is the third dimension
 
     target_size = int(np.ceil(np.percentile(depths, 90)))  # Calculate the 90th percentile
     return target_size
 
 
-def process_images(cta_path, annotation_path, target_size, new_spacing, crop_dims, hr=False, depth=10):
+def process_images(cta_path, annotation_path, target_size, new_spacing, crop_dims, hr=False, depth=16):
     # Initialize the subject with image and label maps
     subject = tio.Subject({
         "image": tio.ScalarImage(cta_path),
@@ -50,6 +50,7 @@ def process_images(cta_path, annotation_path, target_size, new_spacing, crop_dim
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             nib.save(nib.Nifti1Image(resized_subject[key].data.numpy().squeeze(), affine=resized_subject[key].affine), save_path)
     else:
+        #processed_subject = tio.Resize((512, 512, 128))(processed_subject)
         # Process for HR scenario with slices of depth D
         for key in ['image', 'label']:
             original_path = getattr(subject, key).path
@@ -58,12 +59,14 @@ def process_images(cta_path, annotation_path, target_size, new_spacing, crop_dim
             base_dir = os.path.dirname(save_path)
             
             # Calculate the number of sub-volumes
-            num_slices = processed_subject[key].data.shape[-1]
+            num_slices = processed_subject[key].data.shape[1]
+            #num_slices = processed_subject[key].data.shape[-1]
             for start_slice in range(0, num_slices, depth):
                 end_slice = min(start_slice + depth, num_slices)
                 
                 # Extract the sub-volume
-                sub_volume_data = processed_subject[key].data[..., start_slice:end_slice]
+                #sub_volume_data = processed_subject[key].data[0:, start_slice:end_slice, ...]
+                #sub_volume_data = processed_subject[key].data[..., start_slice:end_slice]
                 
                 # Ensure the directory exists
                 os.makedirs(base_dir, exist_ok=True)
@@ -72,7 +75,7 @@ def process_images(cta_path, annotation_path, target_size, new_spacing, crop_dim
                 sub_volume_save_path = f"{base_dir}/{original_file_name}_{start_slice//depth:04d}.nii.gz"
                 
                 # Save the sub-volume
-                nib.save(nib.Nifti1Image(sub_volume_data.numpy().squeeze(), affine=processed_subject[key].affine), sub_volume_save_path)
+                #nib.save(nib.Nifti1Image(sub_volume_data.numpy().squeeze(), affine=processed_subject[key].affine), sub_volume_save_path)
 
                 
             
@@ -91,22 +94,23 @@ if __name__ == "__main__":
     categories = ['cta', 'annotation_dilated']
     sets = ['training', 'validation']
 
-    #all_images = []
-    #for set_type in sets:
-    #        all_images.extend(_list_nifti_files_recursively(os.path.join(args.data_folder, 'cta', set_type)))
-
-    #target_size = calculate_target_size(all_images, new_spacing)
-    #target_size = 201
-    target_size = 200
-
+    all_images = []
     for set_type in sets:
-        image_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'cta', set_type))
-        label_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation_dilated', set_type))
+        all_images.extend(_list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation', set_type)))
+
+    target_size = calculate_target_size(all_images, new_spacing)
+    print(f"Target size: {target_size}")
+    #target_size = 201
+    
+
+    #for set_type in sets:
+    #    image_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'cta', set_type))
+    #    label_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation_dilated', set_type))
 
         # Order the paths
-        image_paths.sort()
-        label_paths.sort()
+    #    image_paths.sort()
+    #    label_paths.sort()
         
-        for image_path, label_path in zip(image_paths, label_paths):
-            process_images(image_path, label_path, target_size, new_spacing, args.crop_dims, args.hr)
-            print(f"Processed: {image_path}, {label_path}")
+    #    for image_path, label_path in zip(image_paths, label_paths):
+    #        process_images(image_path, label_path, target_size, new_spacing, args.crop_dims, args.hr)
+    #        print(f"Processed: {image_path}, {label_path}")
