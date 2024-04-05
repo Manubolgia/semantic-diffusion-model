@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
     all_images = []
     for set_type in sets:
-        all_images.extend(_list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation', set_type)))
+        all_images.extend(_list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation_dilated', set_type)))
 
     target_size = calculate_target_size(all_images, new_spacing)
     print(f"Target size: {target_size}")
