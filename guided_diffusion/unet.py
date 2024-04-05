@@ -114,7 +114,8 @@ class Upsample(nn.Module):
         assert x.shape[1] == self.channels
         if self.dims == 3:
             x = F.interpolate(
-                x, (x.shape[2], x.shape[3] * 2, x.shape[4] * 2), mode="nearest"
+                #x, (x.shape[2], x.shape[3] * 2, x.shape[4] * 2), mode="nearest"
+                x, (x.shape[2] * 2, x.shape[3] * 2, x.shape[4]), mode="nearest"
             )
         else:
             x = F.interpolate(x, scale_factor=2, mode="nearest")
