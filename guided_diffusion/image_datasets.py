@@ -238,6 +238,8 @@ class ImageDataset(Dataset):
         # Normalize to [0, 1]
         if max_val != min_val:
             arr_image = (arr_image - min_val) / (max_val - min_val)
+        else:
+            arr_image = np.zeros_like(arr_image)
 
         # Scale to [-1, 1]
         arr_image = 2 * arr_image - 1
