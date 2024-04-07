@@ -120,8 +120,8 @@ if __name__ == "__main__":
     #target_size = calculate_target_size(all_images, new_spacing)
     #print(f"Target size: {target_size}")
     
-    target_size_hw = 160
-    target_size_d = 160
+    target_size_hw = 160 #176
+    target_size_d = 160 #144
     
 
     for set_type in sets:
