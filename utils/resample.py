@@ -38,13 +38,27 @@ def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new
     })
     
     #min_intensity_value = subject['image'][tio.DATA].min().item()
-    min_intensity_value = -1024
+    image_padding_value = -1024
+    label_padding_value = 0
     
     # Apply resampling and cropping/padding
     resampled_subject = tio.Resample(new_spacing)(subject)
-    crop_or_pad = tio.CropOrPad((target_size_hw, target_size_hw, target_size_d), padding_mode=min_intensity_value)
-    processed_subject = crop_or_pad(resampled_subject)
+    
+    processed_subject = resampled_subject
 
+    image_crop_or_pad = tio.CropOrPad(
+        (target_size_hw, target_size_hw, target_size_d),
+        padding_mode=image_padding_value
+    )
+    processed_subject['image'] = image_crop_or_pad(resampled_subject['image'])
+
+    # For the label map: Apply cropping/padding with 0 or another appropriate value
+    label_crop_or_pad = tio.CropOrPad(
+        (target_size_hw, target_size_hw, target_size_d),
+        padding_mode=label_padding_value
+    )
+    processed_subject['label'] = label_crop_or_pad(resampled_subject['label'])
+    
     # Resize for non-HR scenario
     if not hr:
         resized_subject = tio.Resize((crop_dims, crop_dims, crop_dims))(processed_subject)
