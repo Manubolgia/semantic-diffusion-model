@@ -108,7 +108,7 @@ def main():
                 file_image_path = os.path.join(image_path, base_filename + '.nrrd')
                 file_sample_path = os.path.join(sample_path, base_filename + '.nrrd')
                 file_label_path = os.path.join(label_path, base_filename + '.nrrd')
-            elif args.dataset_mode == 'nifti':
+            elif args.dataset_mode == 'nifti' or args.dataset_mode == 'nifti_hr':
                 # Directories for saving NIFTI files
                 file_image_path = os.path.join(image_path, base_filename + '.nii.gz')
                 file_sample_path = os.path.join(sample_path, base_filename + '.nii.gz')
@@ -190,7 +190,7 @@ def get_affine(dataset_mode, image_path):
     """
     if dataset_mode == 'nrrd':
         affine = np.eye(4)
-    elif dataset_mode == 'nifti':
+    elif dataset_mode == 'nifti' or dataset_mode == 'nifti_hr':
         img = nib.load(image_path)
         affine = img.affine
     else:
