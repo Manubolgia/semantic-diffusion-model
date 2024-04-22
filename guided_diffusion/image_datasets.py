@@ -24,6 +24,7 @@ def load_data(
     random_crop=False, #augmentation
     random_flip=False,
     is_train=True,
+    reference=False,
 ):
     """
     For a dataset, create a generator over (images, kwargs) pairs.
@@ -58,6 +59,7 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr', 'training' if is_train else 'validation'))
         instances = None    
+        
     elif dataset_mode == 'all':
         all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
@@ -73,6 +75,7 @@ def load_data(
         all_files,
         classes=classes,
         instances=instances,
+        reference=reference,
         random_crop=random_crop,
         random_flip=random_flip,
         is_train=is_train
@@ -142,6 +145,7 @@ class ImageDataset(Dataset):
         image_paths,
         classes=None,
         instances=None,
+        reference=False,
         shard=0,
         num_shards=1,
         random_crop=False,
@@ -155,6 +159,7 @@ class ImageDataset(Dataset):
         self.local_images = image_paths[shard:][::num_shards]
         self.local_classes = None if classes is None else classes[shard:][::num_shards]
         self.local_instances = None if instances is None else instances[shard:][::num_shards]
+        self.local_reference = reference
         self.random_crop = random_crop
         self.random_flip = random_flip
 
@@ -163,13 +168,8 @@ class ImageDataset(Dataset):
             return np.eye(4)
         elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
             return read_affine(self.local_images[0])
-        elif self.dataset_mode == 'all':
-            if self.local_images[0].endswith('.nrrd'):
-                return np.eye(4)
-            elif self.local_images[0].endswith('.nii.gz'):
-                return read_affine(self.local_images[0])
-            else:
-                raise NotImplementedError('{} not implemented'.format(self.local_images[0]))
+        else:
+            raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
     
     def __len__(self):
         return len(self.local_images)
@@ -181,13 +181,6 @@ class ImageDataset(Dataset):
             ct_image = read_nrrd(path) 
         elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
             ct_image = read_nifti(path)
-        elif self.dataset_mode == 'all':
-            if path.endswith('.nrrd'):
-                ct_image = read_nrrd(path)
-            elif path.endswith('.nii.gz'):
-                ct_image = read_nifti(path)
-            else:
-                raise NotImplementedError('{} not implemented'.format(path))
         else:
             raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
 
@@ -199,16 +192,21 @@ class ImageDataset(Dataset):
                 ct_class = read_nrrd(class_path)
             elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
                 ct_class = read_nifti(class_path)
-            elif self.dataset_mode == 'all':
-                if class_path.endswith('.nrrd'):
-                    ct_class = read_nrrd(class_path)
-                elif class_path.endswith('.nii.gz'):
-                    ct_class = read_nifti(class_path)
-                else:
-                    raise NotImplementedError('{} not implemented'.format(class_path))
             else:
                 raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
+        
+        if self.local_reference is not False:
+            reference_path = path.replace('\\','/').split('/')[-1].split('_')[0] + '.nii.gz'
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta'), reference_path)
 
+            if self.dataset_mode == 'nrrd':
+                arr_reference = read_nrrd(reference_path)
+            elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+                arr_reference = read_nifti(reference_path)
+            else:
+                raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
+            
+            arr_reference = resize_arr([arr_reference,], 32)[0]
 
         if ct_image.shape[0] != self.resolution:
             arr_image, arr_class = resize_arr([ct_image, ct_class], self.resolution)
@@ -216,24 +214,19 @@ class ImageDataset(Dataset):
             arr_image = ct_image
             arr_class = ct_class
 
-        #if self.is_train:
-            #if self.random_crop:
-            #    arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
-            #else:
-            #    arr_image, arr_class = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
-        #else:
-            #arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
-
         if self.random_flip and random.random() < 0.5:
             arr_image = arr_image[:, ::-1].copy()
             arr_class = arr_class[:, ::-1].copy()
-
+            arr_reference = arr_reference[:, ::-1].copy()
 
         arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
-        #arr_image = arr_image.astype(np.float32)
+        arr_reference = arr_reference.astype(np.float32)
+        
         
         min_val = arr_image.min()
         max_val = arr_image.max()
+        min_val_ref = arr_reference.min()
+        max_val_ref = arr_reference.max()
 
         # Normalize to [0, 1]
         if max_val != min_val:
@@ -241,12 +234,19 @@ class ImageDataset(Dataset):
         else:
             arr_image = np.zeros_like(arr_image)
 
+        if max_val_ref != min_val_ref:
+            arr_reference = (arr_reference - min_val_ref) / (max_val_ref - min_val_ref)
+        else:
+            arr_reference = np.zeros_like(arr_reference)
+
         # Scale to [-1, 1]
         arr_image = 2 * arr_image - 1
+        arr_reference = 2 * arr_reference - 1
 
         out_dict['path'] = path
         out_dict['label_ori'] = arr_class.copy()
         out_dict['label'] = arr_class[None, ]
+        out_dict['reference'] = arr_reference[None,]
 
 
         return arr_image, out_dict 
@@ -274,7 +274,11 @@ def read_affine(file_path):
 
 def resize_arr(np_list, image_size):
 
-    np_image, np_class = np_list
+    if len(np_list)>1:
+        np_image, np_class = np_list
+    elif len(np_list)==1:
+        np_image = np_list[0]
+        np_class = None
 
     def resize_image(image, target_size, resample_method):
 
@@ -287,7 +291,9 @@ def resize_arr(np_list, image_size):
         return zoom(image, zoom_factors, order=resample_method)
 
     arr_image = resize_image(np_image, image_size, 3)
-    arr_class = resize_image(np_class, image_size, 0)
+    arr_class = None
+    if np_class is not None:
+        arr_class = resize_image(np_class, image_size, 0)
 
     return arr_image, arr_class
 

@@ -31,7 +31,13 @@ def main():
     )
     model.to(dist_util.dev())
 
-    
+    #for i, module in enumerate(model.input_blocks):
+    #    print(f"Module {i}: {module}")
+    #for i, module in enumerate(model.middle_block):
+    #    print(f"Module {i}: {module}")
+    #for i, module in enumerate(model.output_blocks):
+    #    print(f"Module {i}: {module}")
+       
     schedule_sampler = create_named_schedule_sampler(args.schedule_sampler, diffusion)
 
     logger.log("creating data loader...")
@@ -41,7 +47,8 @@ def main():
         batch_size=args.batch_size,
         image_size=args.image_size,
         class_cond=args.class_cond,
-        is_train=args.is_train
+        is_train=args.is_train,
+        reference=args.reference
     )
 
     logger.log("training...")
@@ -84,7 +91,8 @@ def create_argparser():
         use_fp16=False,
         fp16_scale_growth=1e-3,
         is_train=True,
-        log_dir='./logs'
+        log_dir='./logs',
+        reference=False,
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()

@@ -80,10 +80,10 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock, CondTimestepBlock):
     support it as an extra input.
     """
 
-    def forward(self, x, cond, emb):
+    def forward(self, x, cond, r, emb):
         for layer in self:
             if isinstance(layer, CondTimestepBlock):
-                x = layer(x, cond, emb)
+                x = layer(x, cond, r, emb)
             elif isinstance(layer, TimestepBlock):
                 x = layer(x, emb)
             else:
@@ -342,6 +342,10 @@ class SDMResBlock(CondTimestepBlock):
         self.use_scale_shift_norm = use_scale_shift_norm
 
         self.in_norm = SPADEGroupNorm(channels, c_channels)
+        #Reference!!!
+        #------------------------#
+        self.in_norm_ref = SPADEGroupNorm(channels, 1)
+        #------------------------#
         self.in_layers = nn.Sequential(
             SiLU(),
             conv_nd(dims, channels, self.out_channels, 3, padding=1),
@@ -366,6 +370,10 @@ class SDMResBlock(CondTimestepBlock):
             ),
         )
         self.out_norm = SPADEGroupNorm(self.out_channels, c_channels)
+        #Reference!!!
+        #------------------------#
+        self.out_norm_ref = SPADEGroupNorm(self.out_channels, 1)
+        #------------------------#
         self.out_layers = nn.Sequential(
             SiLU(),
             nn.Dropout(p=dropout),
@@ -383,7 +391,7 @@ class SDMResBlock(CondTimestepBlock):
         else:
             self.skip_connection = conv_nd(dims, channels, self.out_channels, 1)
 
-    def forward(self, x, cond, emb):
+    def forward(self, x, cond, r, emb):
         """
         Apply the block to a Tensor, conditioned on a timestep embedding.
 
@@ -392,30 +400,47 @@ class SDMResBlock(CondTimestepBlock):
         :return: an [N x C x ...] Tensor of outputs.
         """
         return checkpoint(
-            self._forward, (x, cond, emb), self.parameters(), self.use_checkpoint
+            self._forward, (x, cond, r, emb), self.parameters(), self.use_checkpoint
         )
 
-    def _forward(self, x, cond, emb):
+    def _forward(self, x, cond, r, emb):
         if self.updown:
             in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
             h = self.in_norm(x, cond)
+            #Reference!!!
+            #------------------------#
+            h = self.in_norm_ref(h, r)
+            #------------------------#
             h = in_rest(h)
             h = self.h_upd(h)
             x = self.x_upd(x)
             h = in_conv(h)
         else:
             h = self.in_norm(x, cond)
+            #Reference!!!
+            #------------------------#
+            h = self.in_norm_ref(h, r)
+            #------------------------#
             h = self.in_layers(h)
         emb_out = self.emb_layers(emb).type(h.dtype)
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
         if self.use_scale_shift_norm:
             scale, shift = th.chunk(emb_out, 2, dim=1)
-            h = self.out_norm(h, cond) * (1 + scale) + shift
+            #h = self.out_norm(h, cond) * (1 + scale) + shift
+            #Reference!!!
+            #------------------------#
+            h = self.out_norm(h, cond) 
+            h = self.out_norm_ref(h, r) * (1 + scale) + shift
+            #------------------------#
             h = self.out_layers(h)
         else:
             h = h + emb_out
             h = self.out_norm(h, cond)
+            #Reference!!!
+            #------------------------#
+            h = self.out_norm_ref(h, r)
+            #------------------------#
             h = self.out_layers(h)
         return self.skip_connection(x) + h
 
@@ -609,6 +634,7 @@ class UNetModel(nn.Module):
         use_scale_shift_norm=False,
         resblock_updown=False,
         use_new_attention_order=False,
+        reference=False
     ):
         super().__init__()
 
@@ -630,6 +656,7 @@ class UNetModel(nn.Module):
         self.num_heads = num_heads
         self.num_head_channels = num_head_channels
         self.num_heads_upsample = num_heads_upsample
+        self.reference = reference
 
         time_embed_dim = model_channels * 4
         self.time_embed = nn.Sequential(
@@ -796,7 +823,7 @@ class UNetModel(nn.Module):
         self.middle_block.apply(convert_module_to_f32)
         self.output_blocks.apply(convert_module_to_f32)
 
-    def forward(self, x, timesteps, y=None):
+    def forward(self, x, timesteps, y=None, r=None):
         """
         Apply the model to an input batch.
 
@@ -809,6 +836,10 @@ class UNetModel(nn.Module):
             self.num_classes is not None
         ), "must specify y if and only if the model is class-conditional"
 
+        assert (r is not None) == (
+            self.reference is not False
+        ), "must specify r if and only if the model has a reference"
+
         hs = []
         emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
 
@@ -816,14 +847,15 @@ class UNetModel(nn.Module):
             assert y.shape == (x.shape[0], self.num_classes, x.shape[2], x.shape[3], x.shape[4])
 
         y = y.type(self.dtype)
+        r = r.type(self.dtype)
         h = x.type(self.dtype)
         for module in self.input_blocks:
-            h = module(h, y, emb)
+            h = module(h, y, r, emb)
             hs.append(h)
-        h = self.middle_block(h, y, emb)
+        h = self.middle_block(h, y, r, emb)
         for module in self.output_blocks:
             h = th.cat([h, hs.pop()], dim=1)
-            h = module(h, y, emb)
+            h = module(h, y, r, emb)
         h = h.type(x.dtype)
         return self.out(h)
 
