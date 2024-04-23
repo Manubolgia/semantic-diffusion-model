@@ -51,7 +51,8 @@ def main():
         deterministic=True,
         random_crop=False,
         random_flip=False,
-        is_train=False
+        is_train=False,
+        reference=args.reference
     )
 
     if args.use_fp16:
@@ -128,9 +129,9 @@ def main():
             affine = get_affine(args.dataset_mode, affine_path[j])
             
 
-            #nib.save(nib.Nifti1Image(np_image.astype(np.int16), affine), file_image_path)
+            nib.save(nib.Nifti1Image(np_image.astype(np.int16), affine), file_image_path)
             nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
-            #nib.save(nib.Nifti1Image(np_label.astype(np.int16), affine), file_label_path)
+            nib.save(nib.Nifti1Image(np_label.astype(np.int16), affine), file_label_path)
 
         
         if args.history:
@@ -171,8 +172,11 @@ def preprocess_input(data, num_classes):
         inst_map = data['instance']
         instance_edge_map = get_edges(inst_map)
         input_semantics = th.cat((input_semantics, instance_edge_map), dim=1)
+    
+    cond = {key: value for key, value in data.items() if key not in ['label', 'instance', 'path', 'label_ori']}
+    cond['y'] = input_semantics
 
-    return {'y': input_semantics}
+    return cond
 
 
 def get_edges(t):
@@ -210,7 +214,8 @@ def create_argparser():
         results_path="",
         is_train=False,
         s=1.0,
-        history=False
+        history=False,
+        reference=False
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
