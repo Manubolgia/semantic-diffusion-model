@@ -197,7 +197,7 @@ class ImageDataset(Dataset):
         
         if self.local_reference is not False:
             reference_path = path.replace('\\','/').split('/')[-1].split('_')[0] + '.nii.gz'
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
 
             if self.dataset_mode == 'nrrd':
                 arr_reference = read_nrrd(reference_path)
@@ -206,7 +206,7 @@ class ImageDataset(Dataset):
             else:
                 raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
             
-            arr_reference = resize_arr([arr_reference,], 32)[0]
+            #arr_reference = resize_arr([arr_reference,], 32)[0]
 
         if ct_image.shape[0] != self.resolution:
             arr_image, arr_class = resize_arr([ct_image, ct_class], self.resolution)
