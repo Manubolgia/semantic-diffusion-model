@@ -272,13 +272,30 @@ class GaussianDiffusion:
 
         B, C = x.shape[:2]
         assert t.shape == (B,)
-        if 'y' in model_kwargs:
+        
+        #if 'y' in model_kwargs:
+        #    model_output = model(x, self._scale_timesteps(t), y=model_kwargs['y'])
+        #else:
+        #    model_output = model(x, self._scale_timesteps(t), **model_kwargs)
+        #Reference!!!
+        #------------------------#
+        if 'y' in model_kwargs and 'reference' in model_kwargs:
+            model_output = model(x, self._scale_timesteps(t), y=model_kwargs['y'], r=model_kwargs['reference'])
+        elif 'y' in model_kwargs and 'reference' not in model_kwargs:
             model_output = model(x, self._scale_timesteps(t), y=model_kwargs['y'])
+        elif 'y' not in model_kwargs and 'reference' in model_kwargs:
+            model_output = model(x, self._scale_timesteps(t), r=model_kwargs['reference'])
         else:
-            model_output = model(x, self._scale_timesteps(t), **model_kwargs)
-
+            model_output = model(x, self._scale_timesteps(t))
+        #------------------------#
         if 's' in model_kwargs and model_kwargs['s'] > 1.0:
-            model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']))
+            #Reference!!!
+            #------------------------#
+            if 'reference' in model_kwargs:
+                model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']), r=model_kwargs['reference'])
+            #------------------------#
+            else:
+                model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']))
             model_output[:, :3] = model_output_zero[:, :3] + model_kwargs['s'] * (model_output[:, :3] - model_output_zero[:, :3])
 
         if self.model_var_type in [ModelVarType.LEARNED, ModelVarType.LEARNED_RANGE]:
@@ -547,6 +564,8 @@ class GaussianDiffusion:
             img = th.randn(*shape, device=device)
         if 'y' in model_kwargs:
             model_kwargs['y'] = model_kwargs['y'].to(device)
+        if 'reference' in model_kwargs:
+            model_kwargs['reference'] = model_kwargs['reference'].to(device)
         indices = list(range(self.num_timesteps))[::-1]
 
         if progress:
