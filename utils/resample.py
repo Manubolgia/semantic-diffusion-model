@@ -25,7 +25,7 @@ def calculate_target_size(files, new_spacing):
     return target_size
 
 
-def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new_spacing, crop_dims, hr=False, depth=16):
+def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new_spacing, crop_dims, hr=False, ref=False, depth=16):
     # 1. Resample the images to the new spacing
     # 2. Crop or pad the images to the target size
     # 3. Resize (hr=False) or split the images into sub-volumes of D=depth (hr=True)
@@ -69,32 +69,41 @@ def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             nib.save(nib.Nifti1Image(resized_subject[key].data.numpy().squeeze(), affine=resized_subject[key].affine), save_path)
     else:
-        processed_subject = tio.Resize((crop_dims, crop_dims, crop_dims), image_interpolation='linear')(processed_subject)
-        # Process for HR scenario with slices of depth D
-        for key in ['image', 'label']:
-            original_path = getattr(subject, key).path
-            original_file_name = os.path.splitext(os.path.basename(original_path))[0].replace('.img.nii', '.img').replace('.label.nii', '.label')
-            save_path = str(original_path).replace('cta', 'cta_processed_hr').replace('annotation_dilated', 'annotation_processed_hr')
-            base_dir = os.path.dirname(save_path)
+        if ref:
+            resized_subject = tio.Resize((crop_dims, crop_dims, crop_dims))(processed_subject)
+        
+            for key in ['image']:
+                original_path = getattr(subject, key).path
+                save_path = str(original_path).replace('cta', 'cta_reference')
+                os.makedirs(os.path.dirname(save_path), exist_ok=True)
+                nib.save(nib.Nifti1Image(resized_subject[key].data.numpy().squeeze(), affine=resized_subject[key].affine), save_path)
+        else:
+            processed_subject = tio.Resize((crop_dims, crop_dims, crop_dims), image_interpolation='linear')(processed_subject)
+            # Process for HR scenario with slices of depth D
+            for key in ['image', 'label']:
+                original_path = getattr(subject, key).path
+                original_file_name = os.path.splitext(os.path.basename(original_path))[0].replace('.img.nii', '.img').replace('.label.nii', '.label')
+                save_path = str(original_path).replace('cta', 'cta_processed_hr').replace('annotation_dilated', 'annotation_processed_hr')
+                base_dir = os.path.dirname(save_path)
             
-            # Calculate the number of sub-volumes
-            #num_slices = processed_subject[key].data.shape[1]
-            num_slices = processed_subject[key].data.shape[-1]
-            for start_slice in range(0, num_slices, depth):
-                end_slice = min(start_slice + depth, num_slices)
+                # Calculate the number of sub-volumes
+                #num_slices = processed_subject[key].data.shape[1]
+                num_slices = processed_subject[key].data.shape[-1]
+                for start_slice in range(0, num_slices, depth):
+                    end_slice = min(start_slice + depth, num_slices)
                 
-                # Extract the sub-volume
-                #sub_volume_data = processed_subject[key].data[0:, start_slice:end_slice, ...]
-                sub_volume_data = processed_subject[key].data[..., start_slice:end_slice]
+                    # Extract the sub-volume
+                    #sub_volume_data = processed_subject[key].data[0:, start_slice:end_slice, ...]
+                    sub_volume_data = processed_subject[key].data[..., start_slice:end_slice]
                 
-                # Ensure the directory exists
-                os.makedirs(base_dir, exist_ok=True)
+                    # Ensure the directory exists
+                    os.makedirs(base_dir, exist_ok=True)
                 
-                # Format the save path with sub-volume index
-                sub_volume_save_path = f"{base_dir}/{original_file_name}_{start_slice//depth:04d}.nii.gz"
+                    # Format the save path with sub-volume index
+                    sub_volume_save_path = f"{base_dir}/{original_file_name}_{start_slice//depth:04d}.nii.gz"
                 
-                # Save the sub-volume
-                nib.save(nib.Nifti1Image(sub_volume_data.numpy().squeeze(), affine=processed_subject[key].affine), sub_volume_save_path)
+                    # Save the sub-volume
+                    nib.save(nib.Nifti1Image(sub_volume_data.numpy().squeeze(), affine=processed_subject[key].affine), sub_volume_save_path)
 
                 
             
@@ -106,6 +115,7 @@ if __name__ == "__main__":
     parser.add_argument("--crop_dims", type=int, default=64, help="Dimensions to crop or pad to (default: 64)")
 
     parser.add_argument("--hr", type=bool, default=False, help="Whether to process HR images (default: False)")
+    parser.add_argument("--ref", type=bool, default=False, help="Whether to process the reference images (default: False)")
 
     args = parser.parse_args()
 
@@ -133,5 +143,5 @@ if __name__ == "__main__":
         label_paths.sort()
         
         for image_path, label_path in zip(image_paths, label_paths):
-            process_images(image_path, label_path, target_size_hw, target_size_d, new_spacing, args.crop_dims, args.hr)
+            process_images(image_path, label_path, target_size_hw, target_size_d, new_spacing, args.crop_dims, args.hr, args.ref)
             print(f"Processed: {image_path}, {label_path}")
