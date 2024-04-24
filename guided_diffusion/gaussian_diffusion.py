@@ -561,7 +561,10 @@ class GaussianDiffusion:
         if noise is not None:
             img = noise
         else:
-            img = th.randn(*shape, device=device)
+            #img = th.randn(*shape, device=device)
+            single_noise = th.randn(1, *shape[1:], device=device)
+            # Repeat the noise to match the batch size
+            img = single_noise.repeat(shape[0], 1, 1, 1, 1)
         if 'y' in model_kwargs:
             model_kwargs['y'] = model_kwargs['y'].to(device)
         if 'reference' in model_kwargs:
