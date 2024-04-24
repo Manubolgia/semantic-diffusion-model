@@ -231,7 +231,10 @@ class ImageDataset(Dataset):
         
         if self.local_reference is not False:
             reference_path = path.replace('\\','/').split('/')[-1].split('_')[0] + '.nii.gz'
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
+            if self.resolution == 176:
+                reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
+            else:
+                reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
 
             if self.dataset_mode == 'nrrd':
                 arr_reference = read_nrrd(reference_path)
