@@ -55,11 +55,14 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
         instances = None
-    elif dataset_mode == 'nifti_hr':
+    elif dataset_mode == 'nifti_hr' and image_size != 176:
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr', 'training' if is_train else 'validation'))
         instances = None    
-        
+    elif dataset_mode == 'nifti_hr' and image_size == 176:
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr176', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr176', 'training' if is_train else 'validation'))
+        instances = None        
     elif dataset_mode == 'all':
         all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
@@ -194,19 +197,7 @@ class ImageDataset(Dataset):
                 ct_class = read_nifti(class_path)
             else:
                 raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
-        
-        if self.local_reference is not False:
-            reference_path = path.replace('\\','/').split('/')[-1].split('_')[0] + '.nii.gz'
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
-
-            if self.dataset_mode == 'nrrd':
-                arr_reference = read_nrrd(reference_path)
-            elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-                arr_reference = read_nifti(reference_path)
-            else:
-                raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
             
-            #arr_reference = resize_arr([arr_reference,], 32)[0]
 
         if ct_image.shape[0] != self.resolution:
             arr_image, arr_class = resize_arr([ct_image, ct_class], self.resolution)
@@ -220,13 +211,9 @@ class ImageDataset(Dataset):
             arr_reference = arr_reference[:, ::-1].copy()
 
         arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
-        arr_reference = arr_reference.astype(np.float32)
-        
         
         min_val = arr_image.min()
         max_val = arr_image.max()
-        min_val_ref = arr_reference.min()
-        max_val_ref = arr_reference.max()
 
         # Normalize to [0, 1]
         if max_val != min_val:
@@ -234,19 +221,33 @@ class ImageDataset(Dataset):
         else:
             arr_image = np.zeros_like(arr_image)
 
-        if max_val_ref != min_val_ref:
-            arr_reference = (arr_reference - min_val_ref) / (max_val_ref - min_val_ref)
-        else:
-            arr_reference = np.zeros_like(arr_reference)
-
         # Scale to [-1, 1]
         arr_image = 2 * arr_image - 1
-        arr_reference = 2 * arr_reference - 1
+
 
         out_dict['path'] = path
         out_dict['label_ori'] = arr_class.copy()
         out_dict['label'] = arr_class[None, ]
-        out_dict['reference'] = arr_reference[None,]
+        
+        if self.local_reference is not False:
+            reference_path = path.replace('\\','/').split('/')[-1].split('_')[0] + '.nii.gz'
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
+
+            if self.dataset_mode == 'nrrd':
+                arr_reference = read_nrrd(reference_path)
+            elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+                arr_reference = read_nifti(reference_path)
+            else:
+                raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
+            arr_reference = arr_reference.astype(np.float32)
+            min_val_ref = arr_reference.min()
+            max_val_ref = arr_reference.max()
+            if max_val_ref != min_val_ref:
+                arr_reference = (arr_reference - min_val_ref) / (max_val_ref - min_val_ref)
+            else:
+                arr_reference = np.zeros_like(arr_reference)
+            arr_reference = 2 * arr_reference - 1
+            out_dict['reference'] = arr_reference[None,]
 
 
         return arr_image, out_dict 
