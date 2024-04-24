@@ -102,7 +102,7 @@ def main():
         all_samples.extend([sample.cpu().numpy() for sample in gathered_samples])
 
         for j in range(sample.shape[0]):
-            base_filename = '.'.join(cond['path'][0].split('/')[-1].split('.')[:-2])
+            base_filename = '.'.join(cond['path'][j].split('/')[-1].split('.')[:-2])
             #base_filename = str(len(all_samples) * args.batch_size)
             if args.dataset_mode == 'nrrd':
                 # Directories for saving NRRD files
