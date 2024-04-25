@@ -406,22 +406,22 @@ class SDMResBlock(CondTimestepBlock):
     def _forward(self, x, cond, r, emb):
         if self.updown:
             in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
-            h = self.in_norm(x, cond)
+            h1 = self.in_norm(x, cond)
             #Reference!!!
             #------------------------#
-            h = self.in_norm_ref(h, r)
+            h2 = self.in_norm_ref(x, r)
             #------------------------#
-            h = in_rest(h)
+            h = in_rest(h1+h2)
             h = self.h_upd(h)
             x = self.x_upd(x)
             h = in_conv(h)
         else:
-            h = self.in_norm(x, cond)
+            h1 = self.in_norm(x, cond)
             #Reference!!!
             #------------------------#
-            h = self.in_norm_ref(h, r)
+            h2 = self.in_norm_ref(x, r)
             #------------------------#
-            h = self.in_layers(h)
+            h = self.in_layers(h1+h2)
         emb_out = self.emb_layers(emb).type(h.dtype)
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
@@ -430,18 +430,19 @@ class SDMResBlock(CondTimestepBlock):
             #h = self.out_norm(h, cond) * (1 + scale) + shift
             #Reference!!!
             #------------------------#
-            h = self.out_norm(h, cond) 
-            h = self.out_norm_ref(h, r) * (1 + scale) + shift
+            h1 = self.out_norm(h, cond) 
+            h2 = self.out_norm_ref(h, r) 
+            h = (h1+h2)* (1 + scale) + shift
             #------------------------#
             h = self.out_layers(h)
         else:
             h = h + emb_out
-            h = self.out_norm(h, cond)
+            h1 = self.out_norm(h, cond)
             #Reference!!!
             #------------------------#
-            h = self.out_norm_ref(h, r)
+            h2 = self.out_norm_ref(h, r)
             #------------------------#
-            h = self.out_layers(h)
+            h = self.out_layers(h1+h2)
         return self.skip_connection(x) + h
 
 
