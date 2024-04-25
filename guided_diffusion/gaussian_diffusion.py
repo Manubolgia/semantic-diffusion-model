@@ -562,20 +562,20 @@ class GaussianDiffusion:
         if noise is not None:
             img = noise
         else:
-            #img = th.randn(*shape, device=device)
+            img = th.randn(*shape, device=device)
             
-            full_volume_depth = batch_size*depth
-            full_noise = th.randn(1, channels, height, width, full_volume_depth, device=device)
+            #full_volume_depth = batch_size*depth
+            #full_noise = th.randn(1, channels, height, width, full_volume_depth, device=device)
             
             # Ensure that the full depth is divisible by the desired depth
-            assert full_volume_depth % depth == 0, "Full depth must be divisible by the subvolume depth"
+            #assert full_volume_depth % depth == 0, "Full depth must be divisible by the subvolume depth"
             
             # Slice and reorganize into batch dimension
-            slices = [full_noise[..., i*depth:(i+1)*depth] for i in range(batch_size)]
-            img = th.cat(slices, dim=0)  # Shape: (num_slices, channels, height, width, depth)
+            #slices = [full_noise[..., i*depth:(i+1)*depth] for i in range(batch_size)]
+            #img = th.cat(slices, dim=0)  # Shape: (num_slices, channels, height, width, depth)
 
             # Ensure the number of slices matches the batch size
-            assert img.shape[0] == batch_size, "Number of slices must match the batch size"
+            #assert img.shape[0] == batch_size, "Number of slices must match the batch size"
 
         if 'y' in model_kwargs:
             model_kwargs['y'] = model_kwargs['y'].to(device)
