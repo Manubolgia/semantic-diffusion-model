@@ -293,6 +293,9 @@ class TrainLoop:
             inst_map = data['instance']
             instance_edge_map = self.get_edges(inst_map)
             input_semantics = th.cat((input_semantics, instance_edge_map), dim=1)
+        if 'positional_encoding' in data:
+            input_semantics = th.cat((input_semantics, data['positional_encoding']), dim=1)
+            data.pop('positional_encoding')
 
         if self.drop_rate > 0.0:
             mask = (th.rand([input_semantics.shape[0], 1, input_semantics.shape[0], 1, 1]) > self.drop_rate).float()

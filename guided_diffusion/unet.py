@@ -341,7 +341,12 @@ class SDMResBlock(CondTimestepBlock):
         self.use_checkpoint = use_checkpoint
         self.use_scale_shift_norm = use_scale_shift_norm
 
-        self.in_norm = SPADEGroupNorm(channels, c_channels)
+        #self.in_norm = SPADEGroupNorm(channels, c_channels)
+        #Positional Embedding!!!
+        #------------------------#
+        self.in_norm = SPADEGroupNorm(channels, c_channels+1)
+        #------------------------#
+
         #Reference!!!
         #------------------------#
         self.in_norm_ref = SPADEGroupNorm(channels, 1)
@@ -369,7 +374,13 @@ class SDMResBlock(CondTimestepBlock):
                 2 * self.out_channels if use_scale_shift_norm else self.out_channels,
             ),
         )
-        self.out_norm = SPADEGroupNorm(self.out_channels, c_channels)
+        #self.out_norm = SPADEGroupNorm(self.out_channels, c_channels)
+        
+        #Positional Embedding!!!
+        #------------------------#
+        self.out_norm = SPADEGroupNorm(self.out_channels, c_channels+1)
+        #------------------------#
+
         #Reference!!!
         #------------------------#
         self.out_norm_ref = SPADEGroupNorm(self.out_channels, 1)
@@ -843,9 +854,14 @@ class UNetModel(nn.Module):
 
         hs = []
         emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
-
+        
+        # Positional Embedding!!!
+        #------------------------#
         if self.num_classes is not None:
-            assert y.shape == (x.shape[0], self.num_classes, x.shape[2], x.shape[3], x.shape[4])
+            assert y.shape == (x.shape[0], self.num_classes + 1, x.shape[2], x.shape[3], x.shape[4])
+        #------------------------#
+        #if self.num_classes is not None:
+        #    assert y.shape == (x.shape[0], self.num_classes, x.shape[2], x.shape[3], x.shape[4])
 
         y = y.type(self.dtype)
         r = r.type(self.dtype)

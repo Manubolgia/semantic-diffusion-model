@@ -172,6 +172,9 @@ def preprocess_input(data, num_classes):
         inst_map = data['instance']
         instance_edge_map = get_edges(inst_map)
         input_semantics = th.cat((input_semantics, instance_edge_map), dim=1)
+    if 'positional_encoding' in data:
+            input_semantics = th.cat((input_semantics, data['positional_encoding']), dim=1)
+            data.pop('positional_encoding')
     
     cond = {key: value for key, value in data.items() if key not in ['label', 'instance', 'path', 'label_ori']}
     cond['y'] = input_semantics

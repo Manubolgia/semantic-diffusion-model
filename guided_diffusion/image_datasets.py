@@ -9,6 +9,7 @@ from PIL import Image
 import blobfile as bf
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
+import torch
 from scipy.ndimage import zoom
 
 
@@ -174,6 +175,30 @@ class ImageDataset(Dataset):
         else:
             raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
     
+    def create_positional_embeddings(self, path):
+        #get the index of the image
+        index = int(path.split('/')[-1].split('_')[-1].split('.')[0])
+        
+        depth = 16
+        #get the total number of images
+        if self.resolution == 176:
+            total_images = 9   
+        elif self.resolution == 128:
+            total_images = 8
+        else:
+            raise NotImplementedError('Resolution not implemented')
+        
+        #create the positional embeddings
+        z_start = int(index * total_images)
+        z_end = int(z_start + depth)
+
+        global_z_position = (np.arange(z_start, z_end))/self.resolution
+        global_z_embedding = np.tile(global_z_position.reshape(1, 1, depth), (self.resolution, self.resolution, 1))
+
+        global_z_embedding = global_z_embedding[np.newaxis, ...]
+        
+        return global_z_embedding
+    
     def __len__(self):
         return len(self.local_images)
 
@@ -224,10 +249,17 @@ class ImageDataset(Dataset):
         # Scale to [-1, 1]
         arr_image = 2 * arr_image - 1
 
+        # Positional encoding
+        # -------------------
+        positional_encoding = self.create_positional_embeddings(path)
+        
+        # -------------------
 
         out_dict['path'] = path
         out_dict['label_ori'] = arr_class.copy()
         out_dict['label'] = arr_class[None, ]
+        out_dict['positional_encoding'] = positional_encoding
+        
         
         if self.local_reference is not False:
             reference_path = path.replace('\\','/').split('/')[-1].split('_')[0] + '.nii.gz'
