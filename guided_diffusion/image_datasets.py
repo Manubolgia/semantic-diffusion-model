@@ -26,6 +26,7 @@ def load_data(
     random_flip=False,
     is_train=True,
     reference=False,
+    pos_emb=False
 ):
     """
     For a dataset, create a generator over (images, kwargs) pairs.
@@ -82,7 +83,8 @@ def load_data(
         reference=reference,
         random_crop=random_crop,
         random_flip=random_flip,
-        is_train=is_train
+        is_train=is_train,
+        pos_emb=pos_emb
     )
 
     if deterministic:
@@ -150,6 +152,7 @@ class ImageDataset(Dataset):
         classes=None,
         instances=None,
         reference=False,
+        pos_emb=False,
         shard=0,
         num_shards=1,
         random_crop=False,
@@ -166,6 +169,7 @@ class ImageDataset(Dataset):
         self.local_reference = reference
         self.random_crop = random_crop
         self.random_flip = random_flip
+        self.pos_emb = pos_emb
 
     def get_affine(self):
         if self.dataset_mode == 'nrrd':
@@ -251,14 +255,15 @@ class ImageDataset(Dataset):
 
         # Positional encoding
         # -------------------
-        positional_encoding = self.create_positional_embeddings(path)
-        
+        if self.pos_emb is not False:
+            positional_encoding = self.create_positional_embeddings(path)
+            out_dict['positional_encoding'] = positional_encoding
         # -------------------
 
         out_dict['path'] = path
         out_dict['label_ori'] = arr_class.copy()
         out_dict['label'] = arr_class[None, ]
-        out_dict['positional_encoding'] = positional_encoding
+        
         
         
         if self.local_reference is not False:

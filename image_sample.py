@@ -218,7 +218,8 @@ def create_argparser():
         is_train=False,
         s=1.0,
         history=False,
-        reference=False
+        reference=False,
+        pos_emb=False
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()

@@ -331,6 +331,7 @@ class SDMResBlock(CondTimestepBlock):
         use_checkpoint=False,
         up=False,
         down=False,
+        pos_emb=False,
     ):
         super().__init__()
         self.channels = channels
@@ -340,11 +341,15 @@ class SDMResBlock(CondTimestepBlock):
         self.use_conv = use_conv
         self.use_checkpoint = use_checkpoint
         self.use_scale_shift_norm = use_scale_shift_norm
+        self.pos_emb = pos_emb
 
         #self.in_norm = SPADEGroupNorm(channels, c_channels)
         #Positional Embedding!!!
         #------------------------#
-        self.in_norm = SPADEGroupNorm(channels, c_channels+1)
+        if self.pos_emb:
+            self.in_norm = SPADEGroupNorm(channels, c_channels+1)
+        else:
+            self.in_norm = SPADEGroupNorm(channels, c_channels)
         #------------------------#
 
         #Reference!!!
@@ -378,7 +383,10 @@ class SDMResBlock(CondTimestepBlock):
         
         #Positional Embedding!!!
         #------------------------#
-        self.out_norm = SPADEGroupNorm(self.out_channels, c_channels+1)
+        if self.pos_emb:
+            self.out_norm = SPADEGroupNorm(self.out_channels, c_channels+1)
+        else:
+            self.out_norm = SPADEGroupNorm(self.out_channels, c_channels)
         #------------------------#
 
         #Reference!!!
@@ -646,7 +654,8 @@ class UNetModel(nn.Module):
         use_scale_shift_norm=False,
         resblock_updown=False,
         use_new_attention_order=False,
-        reference=False
+        reference=False,
+        pos_emb=False,
     ):
         super().__init__()
 
@@ -669,6 +678,7 @@ class UNetModel(nn.Module):
         self.num_head_channels = num_head_channels
         self.num_heads_upsample = num_heads_upsample
         self.reference = reference
+        self.pos_emb = pos_emb
 
         time_embed_dim = model_channels * 4
         self.time_embed = nn.Sequential(
@@ -745,6 +755,7 @@ class UNetModel(nn.Module):
                 dims=dims,
                 use_checkpoint=use_checkpoint,
                 use_scale_shift_norm=use_scale_shift_norm,
+                pos_emb=self.pos_emb,
             ),
             AttentionBlock(
                 ch,
@@ -761,6 +772,7 @@ class UNetModel(nn.Module):
                 dims=dims,
                 use_checkpoint=use_checkpoint,
                 use_scale_shift_norm=use_scale_shift_norm,
+                pos_emb=self.pos_emb,
             ),
         )
         self._feature_size += ch
@@ -779,6 +791,7 @@ class UNetModel(nn.Module):
                         dims=dims,
                         use_checkpoint=use_checkpoint,
                         use_scale_shift_norm=use_scale_shift_norm,
+                        pos_emb=self.pos_emb,
                     )
                 ]
                 ch = int(model_channels * mult)
@@ -805,6 +818,7 @@ class UNetModel(nn.Module):
                             use_checkpoint=use_checkpoint,
                             use_scale_shift_norm=use_scale_shift_norm,
                             up=True,
+                            pos_emb=self.pos_emb,
                         )
                         if resblock_updown
                         else Upsample(ch, conv_resample, dims=dims, out_channels=out_ch)
@@ -857,8 +871,10 @@ class UNetModel(nn.Module):
         
         # Positional Embedding!!!
         #------------------------#
-        if self.num_classes is not None:
+        if self.num_classes is not None and self.pos_emb:
             assert y.shape == (x.shape[0], self.num_classes + 1, x.shape[2], x.shape[3], x.shape[4])
+        elif self.num_classes is not None:
+            assert y.shape == (x.shape[0], self.num_classes, x.shape[2], x.shape[3], x.shape[4])
         #------------------------#
         #if self.num_classes is not None:
         #    assert y.shape == (x.shape[0], self.num_classes, x.shape[2], x.shape[3], x.shape[4])

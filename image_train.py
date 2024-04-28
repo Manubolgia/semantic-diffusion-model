@@ -48,7 +48,8 @@ def main():
         image_size=args.image_size,
         class_cond=args.class_cond,
         is_train=args.is_train,
-        reference=args.reference
+        reference=args.reference,
+        pos_emb=args.pos_emb
     )
 
     logger.log("training...")
@@ -93,6 +94,7 @@ def create_argparser():
         is_train=True,
         log_dir='./logs',
         reference=False,
+        pos_emb=False,
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
