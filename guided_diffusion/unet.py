@@ -425,22 +425,42 @@ class SDMResBlock(CondTimestepBlock):
     def _forward(self, x, cond, r, emb):
         if self.updown:
             in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
-            h1 = self.in_norm(x, cond)
+            
             #Reference!!!
-            #------------------------#
-            h2 = self.in_norm_ref(x, r)
-            #------------------------#
-            h = in_rest(h1+h2)
+            #----------v1-------------#
+            #h = self.in_norm(x, cond)
+            #h = self.in_norm_ref(h, r)
+            #h = in_rest(h)
+            #----------v2-------------#
+            #h1 = self.in_norm(x, cond)
+            #h2 = self.in_norm_ref(x, r)
+            #h = in_rest(h1+h2)
+            #----------v3-------------#
+            h = self.in_norm_ref(x, r)
+            h = self.in_norm(h, cond)
+            h = in_rest(h)
+            #-------------------------#
+            
             h = self.h_upd(h)
             x = self.x_upd(x)
             h = in_conv(h)
         else:
-            h1 = self.in_norm(x, cond)
+            
             #Reference!!!
+            #-----------v1-----------#
+            #h = self.in_norm(x, cond)
+            #h = self.in_norm_ref(h, r)
+            #h = self.in_layers(h)
+            #-----------v2-----------#
+            #h1 = self.in_norm(x, cond)
+            #h2 = self.in_norm_ref(x, r)
+            #h = self.in_layers(h1+h2)
+            #-----------v3-----------#
+            h = self.in_norm_ref(x, r)
+            h = self.in_norm(h, cond)
+            h = self.in_layers(h)
             #------------------------#
-            h2 = self.in_norm_ref(x, r)
-            #------------------------#
-            h = self.in_layers(h1+h2)
+            
         emb_out = self.emb_layers(emb).type(h.dtype)
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
@@ -448,20 +468,36 @@ class SDMResBlock(CondTimestepBlock):
             scale, shift = th.chunk(emb_out, 2, dim=1)
             #h = self.out_norm(h, cond) * (1 + scale) + shift
             #Reference!!!
-            #------------------------#
-            h1 = self.out_norm(h, cond) 
-            h2 = self.out_norm_ref(h, r) 
-            h = (h1+h2)* (1 + scale) + shift
+            #-----------v1-----------#
+            #h = self.out_norm(h, cond) 
+            #h = self.out_norm_ref(h, r) * (1 + scale) + shift
+            #-----------v2-----------#
+            #h1 = self.out_norm(h, cond) 
+            #h2 = self.out_norm_ref(h, r) 
+            #h = (h1+h2)* (1 + scale) + shift
+            #-----------v3-----------#
+            h = self.out_norm_ref(h, r)
+            h = self.out_norm(h, cond) * (1 + scale) + shift
             #------------------------#
             h = self.out_layers(h)
         else:
             h = h + emb_out
-            h1 = self.out_norm(h, cond)
+            
             #Reference!!!
+            #-----------v1-----------#
+            #h = self.out_norm(h, cond)
+            #h = self.out_norm_ref(h, r)
+            #h = self.out_layers(h)
+            #-----------v2-----------#
+            #h1 = self.out_norm(h, cond)
+            #h2 = self.out_norm_ref(h, r)
+            #h = self.out_layers(h1+h2)
+            #-----------v3-----------#
+            h = self.out_norm_ref(h, r)
+            h = self.out_norm(h, cond)
+            h = self.out_layers(h)
             #------------------------#
-            h2 = self.out_norm_ref(h, r)
-            #------------------------#
-            h = self.out_layers(h1+h2)
+            
         return self.skip_connection(x) + h
 
 
