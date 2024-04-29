@@ -52,7 +52,8 @@ def main():
         random_crop=False,
         random_flip=False,
         is_train=False,
-        reference=args.reference
+        reference=args.reference,
+        pos_emb=args.pos_emb
     )
 
     if args.use_fp16:
