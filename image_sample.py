@@ -220,7 +220,7 @@ def create_argparser():
         s=1.0,
         history=False,
         reference=False,
-        pos_emb=False
+        pos_emb=False,
     )
     defaults.update(model_and_diffusion_defaults())
     parser = argparse.ArgumentParser()
