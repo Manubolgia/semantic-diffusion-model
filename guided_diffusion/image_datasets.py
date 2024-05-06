@@ -179,21 +179,93 @@ class ImageDataset(Dataset):
         else:
             raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
     
+    def create_reference(self, path):
+        # Read the reference image path
+        reference_path = path.replace('\\', '/').split('/')[-1].split('_')[0] + '.nii.gz'
+        if self.resolution == 176:
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
+        else:
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
+
+        # Load the appropriate dataset mode
+        if self.dataset_mode == 'nrrd':
+            arr_reference = read_nrrd(reference_path)
+        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+            arr_reference = read_nifti(reference_path)
+        else:
+            raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
+
+        arr_reference = arr_reference.astype(np.float32)
+
+        # Extract the image index from the path
+        index = int(path.split('/')[-1].split('_')[-1].split('.')[0])
+
+        depth = 16  # Define the desired depth per patch
+        # Determine the scaling factor and the number of images based on the resolution
+        if self.resolution == 176:
+            total_images = 9
+            original_depth = 144
+            lr_depth = arr_reference.shape[2]
+        elif self.resolution == 128:
+            total_images = 8
+            original_depth = 128
+            lr_depth = arr_reference.shape[2]
+        else:
+            raise NotImplementedError('Resolution not implemented')
+
+        # Calculate the starting and ending indices of the slice in the reference image
+        z_start = int(index*depth*lr_depth/original_depth)
+        z_end = int(z_start + depth*lr_depth/original_depth)
+
+        # Add margin before and after the slice
+        margin = 8
+        z_start -= margin
+        z_end += margin
+
+        # Determine how much padding is needed before and after the volume
+        pad_before = max(0, -z_start)
+        pad_after = max(0, z_end - lr_depth)
+
+        # Apply padding to the reference volume if necessary
+        if pad_before > 0 or pad_after > 0:
+            arr_reference = np.pad(arr_reference, ((0, 0), (0, 0), (pad_before, pad_after)), mode='constant', constant_values=-1024)
+
+        # Adjust the start and end indices after padding
+        z_start += pad_before
+        z_end += pad_before
+
+        # Normalize the reference volume between -1 and 1
+        if arr_reference.max() != arr_reference.min():
+            arr_reference = (arr_reference - arr_reference.min()) / (arr_reference.max() - arr_reference.min())
+        else:
+            arr_reference = np.zeros_like(arr_reference)
+
+        arr_reference = 2 * arr_reference - 1
+        
+        arr_reference = arr_reference[:, :, z_start:z_end]
+        arr_reference = arr_reference[np.newaxis, ...]
+
+        # Create the global positional encoding
+
+        global_z_position= np.arange(z_start-pad_before, z_end-pad_before)/lr_depth
+
+        # Create a 3D positional embedding with the same dimensions as the reference
+        global_z_embedding = np.tile(global_z_position.reshape(1, 1, int(lr_depth/total_images + 2*margin)), (lr_depth, lr_depth, 1))
+        global_z_embedding = global_z_embedding[np.newaxis, ...]
+
+        # Concatenate the reference volume and the positional encoding
+        arr_reference = np.concatenate([arr_reference, global_z_embedding], axis=0)
+
+        return arr_reference
+
     def create_positional_embeddings(self, path):
         #get the index of the image
         index = int(path.split('/')[-1].split('_')[-1].split('.')[0])
         
         depth = 16
-        #get the total number of images
-        if self.resolution == 176:
-            total_images = 9   
-        elif self.resolution == 128:
-            total_images = 8
-        else:
-            raise NotImplementedError('Resolution not implemented')
-        
+
         #create the positional embeddings
-        z_start = int(index * total_images)
+        z_start = int(index * depth)
         z_end = int(z_start + depth)
 
         global_z_position = (np.arange(z_start, z_end))/self.resolution
@@ -264,31 +336,11 @@ class ImageDataset(Dataset):
         out_dict['label_ori'] = arr_class.copy()
         out_dict['label'] = arr_class[None, ]
         
-        
-        
+        # Create reference
+        # -------------------
         if self.local_reference is not False:
-            reference_path = path.replace('\\','/').split('/')[-1].split('_')[0] + '.nii.gz'
-            if self.resolution == 176:
-                reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
-            else:
-                reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
-
-            if self.dataset_mode == 'nrrd':
-                arr_reference = read_nrrd(reference_path)
-            elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-                arr_reference = read_nifti(reference_path)
-            else:
-                raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
-            arr_reference = arr_reference.astype(np.float32)
-            min_val_ref = arr_reference.min()
-            max_val_ref = arr_reference.max()
-            if max_val_ref != min_val_ref:
-                arr_reference = (arr_reference - min_val_ref) / (max_val_ref - min_val_ref)
-            else:
-                arr_reference = np.zeros_like(arr_reference)
-            arr_reference = 2 * arr_reference - 1
-            out_dict['reference'] = arr_reference[None,]
-
+             out_dict['reference'] = self.create_reference(path)
+        # -------------------
 
         return arr_image, out_dict 
 

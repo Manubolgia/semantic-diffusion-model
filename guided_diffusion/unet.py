@@ -354,7 +354,8 @@ class SDMResBlock(CondTimestepBlock):
 
         #Reference!!!
         #------------------------#
-        self.in_norm_ref = SPADEGroupNorm(channels, 1)
+        #self.in_norm_ref = SPADEGroupNorm(channels, 1)
+        self.in_norm_ref = SPADEGroupNorm(channels, 2)
         #------------------------#
         self.in_layers = nn.Sequential(
             SiLU(),
@@ -391,7 +392,8 @@ class SDMResBlock(CondTimestepBlock):
 
         #Reference!!!
         #------------------------#
-        self.out_norm_ref = SPADEGroupNorm(self.out_channels, 1)
+        #self.out_norm_ref = SPADEGroupNorm(self.out_channels, 1)
+        self.out_norm_ref = SPADEGroupNorm(self.out_channels, 2)
         #------------------------#
         self.out_layers = nn.Sequential(
             SiLU(),
@@ -432,16 +434,16 @@ class SDMResBlock(CondTimestepBlock):
             #h = self.in_norm_ref(h, r)
             #h = in_rest(h)
             #----------v2-------------#
-            #h1 = self.in_norm(x, cond)
-            #h2 = self.in_norm_ref(x, r)
-            #h = in_rest(h1+h2)
+            h1 = self.in_norm(x, cond)
+            h2 = self.in_norm_ref(x, r)
+            h = in_rest(h1+h2)
             #----------v3-------------#
             #h = self.in_norm_ref(x, r)
             #h = self.in_norm(h, cond)
             #h = in_rest(h)
             #----- No Semantics ------#
-            h = self.in_norm_ref(x, r)
-            h = in_rest(h)
+            #h = self.in_norm_ref(x, r)
+            #h = in_rest(h)
             #-------------------------#
             
             h = self.h_upd(h)
@@ -455,16 +457,16 @@ class SDMResBlock(CondTimestepBlock):
             #h = self.in_norm_ref(h, r)
             #h = self.in_layers(h)
             #-----------v2-----------#
-            #h1 = self.in_norm(x, cond)
-            #h2 = self.in_norm_ref(x, r)
-            #h = self.in_layers(h1+h2)
+            h1 = self.in_norm(x, cond)
+            h2 = self.in_norm_ref(x, r)
+            h = self.in_layers(h1+h2)
             #-----------v3-----------#
             #h = self.in_norm_ref(x, r)
             #h = self.in_norm(h, cond)
             #h = self.in_layers(h)
             #----- No Semantics ------#
-            h = self.in_norm_ref(x, r)
-            h = self.in_layers(h)
+            #h = self.in_norm_ref(x, r)
+            #h = self.in_layers(h)
             #-------------------------#
             
         emb_out = self.emb_layers(emb).type(h.dtype)
@@ -478,14 +480,14 @@ class SDMResBlock(CondTimestepBlock):
             #h = self.out_norm(h, cond) 
             #h = self.out_norm_ref(h, r) * (1 + scale) + shift
             #-----------v2-----------#
-            #h1 = self.out_norm(h, cond) 
-            #h2 = self.out_norm_ref(h, r) 
-            #h = (h1+h2)* (1 + scale) + shift
+            h1 = self.out_norm(h, cond) 
+            h2 = self.out_norm_ref(h, r) 
+            h = (h1+h2)* (1 + scale) + shift
             #-----------v3-----------#
             #h = self.out_norm_ref(h, r)
             #h = self.out_norm(h, cond) * (1 + scale) + shift
             #----- No Semantics ------#
-            h = self.out_norm_ref(h, r) * (1 + scale) + shift
+            #h = self.out_norm_ref(h, r) * (1 + scale) + shift
             #-------------------------#
             h = self.out_layers(h)
         else:
@@ -497,16 +499,16 @@ class SDMResBlock(CondTimestepBlock):
             #h = self.out_norm_ref(h, r)
             #h = self.out_layers(h)
             #-----------v2-----------#
-            #h1 = self.out_norm(h, cond)
-            #h2 = self.out_norm_ref(h, r)
-            #h = self.out_layers(h1+h2)
+            h1 = self.out_norm(h, cond)
+            h2 = self.out_norm_ref(h, r)
+            h = self.out_layers(h1+h2)
             #-----------v3-----------#
             #h = self.out_norm_ref(h, r)
             #h = self.out_norm(h, cond)
             #h = self.out_layers(h)
             #----- No Semantics -----#
-            h = self.out_norm_ref(h, r)
-            h = self.out_layers(h)
+            #h = self.out_norm_ref(h, r)
+            #h = self.out_layers(h)
             #------------------------#
             
         return self.skip_connection(x) + h
