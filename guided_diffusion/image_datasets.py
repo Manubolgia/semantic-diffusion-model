@@ -212,11 +212,11 @@ class ImageDataset(Dataset):
             raise NotImplementedError('Resolution not implemented')
 
         # Calculate the starting and ending indices of the slice in the reference image
-        z_start = int(index*depth*lr_depth/original_depth)
-        z_end = int(z_start + depth*lr_depth/original_depth)
+        z_start = 0#int(index*depth*lr_depth/original_depth)
+        z_end = arr_reference.shape[-1]#int(z_start + depth*lr_depth/original_depth)
 
         # Add margin before and after the slice
-        margin = 8
+        margin = 0#8
         z_start -= margin
         z_end += margin
 
