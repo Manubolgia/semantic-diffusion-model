@@ -200,14 +200,12 @@ class ImageDataset(Dataset):
         # Extract the image index from the path
         index = int(path.split('/')[-1].split('_')[-1].split('.')[0])
 
-        depth = 16  # Define the desired depth per patch
+        depth = 16  # Define the depth per HR patch
         # Determine the scaling factor and the number of images based on the resolution
         if self.resolution == 176:
-            total_images = 9
             original_depth = 144
             lr_depth = arr_reference.shape[2]
         elif self.resolution == 128:
-            total_images = 8
             original_depth = 128
             lr_depth = arr_reference.shape[2]
         else:
@@ -235,8 +233,13 @@ class ImageDataset(Dataset):
         z_end += pad_before
 
         # Normalize the reference volume between -1 and 1
+        min_val = -1024 
+        max_val = 3071
+
         if arr_reference.max() != arr_reference.min():
-            arr_reference = (arr_reference - arr_reference.min()) / (arr_reference.max() - arr_reference.min())
+            arr_reference[arr_reference > max_val] = max_val
+            arr_reference[arr_reference < min_val] = min_val
+            arr_reference = (arr_reference - min_val) / (max_val - min_val)
         else:
             arr_reference = np.zeros_like(arr_reference)
 
@@ -250,7 +253,7 @@ class ImageDataset(Dataset):
         global_z_position= np.arange(z_start-pad_before, z_end-pad_before)/lr_depth
 
         # Create a 3D positional embedding with the same dimensions as the reference
-        global_z_embedding = np.tile(global_z_position.reshape(1, 1, int(lr_depth/total_images + 2*margin)), (lr_depth, lr_depth, 1))
+        global_z_embedding = np.tile(global_z_position.reshape(1, 1, arr_reference.shape[-1]), (lr_depth, lr_depth, 1))
         global_z_embedding = global_z_embedding[np.newaxis, ...]
 
         # Concatenate the reference volume and the positional encoding
@@ -313,11 +316,13 @@ class ImageDataset(Dataset):
 
         arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
         
-        min_val = arr_image.min()
-        max_val = arr_image.max()
+        min_val = -1024 #arr_image.min()
+        max_val = 3071 #arr_image.max()
 
         # Normalize to [0, 1]
         if max_val != min_val:
+            arr_image[arr_image > max_val] = max_val
+            arr_image[arr_image < min_val] = min_val
             arr_image = (arr_image - min_val) / (max_val - min_val)
         else:
             arr_image = np.zeros_like(arr_image)
