@@ -197,9 +197,14 @@ class ImageDataset(Dataset):
 
         arr_reference = arr_reference.astype(np.float32)
 
-        # Normalize the reference volume between -1 and 1
+        min_val = -1024 #arr_reference.min()
+        max_val = 3071 #arr_reference.max()
+
+        # Normalize to [0, 1]
         if arr_reference.max() != arr_reference.min():
-            arr_reference = (arr_reference - arr_reference.min()) / (arr_reference.max() - arr_reference.min())
+            arr_reference[arr_reference > max_val] = max_val
+            arr_reference[arr_reference < min_val] = min_val
+            arr_reference = (arr_reference - min_val) / (max_val - min_val)
         else:
             arr_reference = np.zeros_like(arr_reference)
 
@@ -264,11 +269,13 @@ class ImageDataset(Dataset):
 
         arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
         
-        min_val = arr_image.min()
-        max_val = arr_image.max()
+        min_val = -1024 #arr_image.min()
+        max_val = 3071 #arr_image.max()
 
         # Normalize to [0, 1]
-        if max_val != min_val:
+        if arr_image.max() != arr_image.min():
+            arr_image[arr_image > max_val] = max_val
+            arr_image[arr_image < min_val] = min_val
             arr_image = (arr_image - min_val) / (max_val - min_val)
         else:
             arr_image = np.zeros_like(arr_image)
