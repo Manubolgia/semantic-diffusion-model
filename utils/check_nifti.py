@@ -1,5 +1,6 @@
 import os
 import nibabel as nib
+import argparse
 
 def analyze_nifti_files(base_path):
     max_intensities = []
@@ -34,5 +35,7 @@ def analyze_nifti_files(base_path):
         print("No NIfTI files found.")
 
 # Example usage:
-base_path = "E:/BMC/Thesis/data/kaggle_sample_hr/cta"
-analyze_nifti_files(base_path)
+parser = argparse.ArgumentParser(description="Image Processing Script")
+parser.add_argument("--data_folder", required=True, help="Path to the data folder")
+args = parser.parse_args()
+analyze_nifti_files(args.data_folder)
