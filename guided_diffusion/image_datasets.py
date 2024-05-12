@@ -233,8 +233,8 @@ class ImageDataset(Dataset):
         z_end += pad_before
 
         # Normalize the reference volume between -1 and 1
-        min_val = -1024 
-        max_val = 3071
+        min_val = arr_reference.min() #-1024
+        max_val = arr_reference.max() #3071
 
         if arr_reference.max() != arr_reference.min():
             arr_reference[arr_reference > max_val] = max_val
@@ -316,8 +316,8 @@ class ImageDataset(Dataset):
 
         arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
         
-        min_val = -1024 #arr_image.min()
-        max_val = 3071 #arr_image.max()
+        min_val = arr_image.min() #-1024
+        max_val = arr_image.max() #3071 
 
         # Normalize to [0, 1]
         if max_val != min_val:
