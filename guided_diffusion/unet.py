@@ -347,7 +347,7 @@ class SDMResBlock(CondTimestepBlock):
         #Positional Embedding!!!
         #------------------------#
         if self.pos_emb:
-            self.in_norm = SPADEGroupNorm(channels, c_channels+1)
+            self.in_norm = SPADEGroupNorm(channels, c_channels+3)
         else:
             self.in_norm = SPADEGroupNorm(channels, c_channels)
         #------------------------#
@@ -355,7 +355,7 @@ class SDMResBlock(CondTimestepBlock):
         #Reference!!!
         #------------------------#
         #self.in_norm_ref = SPADEGroupNorm(channels, 1)
-        self.in_norm_ref = SPADEGroupNorm(channels, 2)
+        self.in_norm_ref = SPADEGroupNorm(channels, 4)
         #------------------------#
         self.in_layers = nn.Sequential(
             SiLU(),
@@ -385,7 +385,7 @@ class SDMResBlock(CondTimestepBlock):
         #Positional Embedding!!!
         #------------------------#
         if self.pos_emb:
-            self.out_norm = SPADEGroupNorm(self.out_channels, c_channels+1)
+            self.out_norm = SPADEGroupNorm(self.out_channels, c_channels+3)
         else:
             self.out_norm = SPADEGroupNorm(self.out_channels, c_channels)
         #------------------------#
@@ -393,7 +393,7 @@ class SDMResBlock(CondTimestepBlock):
         #Reference!!!
         #------------------------#
         #self.out_norm_ref = SPADEGroupNorm(self.out_channels, 1)
-        self.out_norm_ref = SPADEGroupNorm(self.out_channels, 2)
+        self.out_norm_ref = SPADEGroupNorm(self.out_channels, 4)
         #------------------------#
         self.out_layers = nn.Sequential(
             SiLU(),
@@ -921,7 +921,7 @@ class UNetModel(nn.Module):
         # Positional Embedding!!!
         #------------------------#
         if self.num_classes is not None and self.pos_emb:
-            assert y.shape == (x.shape[0], self.num_classes + 1, x.shape[2], x.shape[3], x.shape[4])
+            assert y.shape == (x.shape[0], self.num_classes + 3, x.shape[2], x.shape[3], x.shape[4])
         elif self.num_classes is not None:
             assert y.shape == (x.shape[0], self.num_classes, x.shape[2], x.shape[3], x.shape[4])
         #------------------------#

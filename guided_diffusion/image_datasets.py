@@ -60,11 +60,15 @@ def load_data(
     elif dataset_mode == 'nifti_hr' and image_size != 176:
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr', 'training' if is_train else 'validation'))
-        instances = None    
+        instances = None 
     elif dataset_mode == 'nifti_hr' and image_size == 176:
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr176', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr176', 'training' if is_train else 'validation'))
         instances = None        
+    elif dataset_mode == 'nifti_mosaic':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_mosaic', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_mosaic', 'training' if is_train else 'validation'))
+        instances = None   
     elif dataset_mode == 'all':
         all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
@@ -181,56 +185,49 @@ class ImageDataset(Dataset):
     
     def create_reference(self, path):
         # Read the reference image path
-        reference_path = path.replace('\\', '/').split('/')[-1].split('_')[0] + '.nii.gz'
-        if self.resolution == 176:
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
-        else:
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
+        parts = path.replace('\\', '/').split('/')[-1].split('_')
+        reference_path = parts[0] + '.nii.gz'
+        reference_path = os.path.join(os.path.dirname(path).replace('cta_mosaic', 'cta_reference'), reference_path)
 
-        # Load the appropriate dataset mode
-        if self.dataset_mode == 'nrrd':
-            arr_reference = read_nrrd(reference_path)
-        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-            arr_reference = read_nifti(reference_path)
-        else:
-            raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
-
-        arr_reference = arr_reference.astype(np.float32)
+        arr_reference = read_nifti(reference_path).astype(np.float32)
+        reference_height, reference_width, reference_depth = arr_reference.shape
 
         # Extract the image index from the path
-        index = int(path.split('/')[-1].split('_')[-1].split('.')[0])
+        x_index, y_index, z_index = map(int, [parts[-3], parts[-2], parts[-1].split('.')[0]])
+        
+        subvol_dims = (128, 128, 16)
+        margin = (8,8,8)
+        scaling_factor = (reference_height / 256, reference_width / 256, reference_depth / 256)
 
-        depth = 16  # Define the depth per HR patch
-        # Determine the scaling factor and the number of images based on the resolution
-        if self.resolution == 176:
-            original_depth = 144
-            lr_depth = arr_reference.shape[2]
-        elif self.resolution == 128:
-            original_depth = 128
-            lr_depth = arr_reference.shape[2]
-        else:
-            raise NotImplementedError('Resolution not implemented')
+        def calculate_lr_indices(index, dim_size, scaling_factor, margin):
+            start = int(index*dim_size*scaling_factor)
+            end = int(start + dim_size*scaling_factor)
+            start -= margin
+            end += margin
+            return start, end
 
-        # Calculate the starting and ending indices of the slice in the reference image
-        z_start = int(index*depth*lr_depth/original_depth)
-        z_end = int(z_start + depth*lr_depth/original_depth)
-
-        # Add margin before and after the slice
-        margin = 4#8
-        z_start -= margin
-        z_end += margin
+        x_start, x_end = calculate_lr_indices(x_index, subvol_dims[0], scaling_factor[0], margin[0])
+        y_start, y_end = calculate_lr_indices(y_index, subvol_dims[1], scaling_factor[1], margin[1])
+        z_start, z_end = calculate_lr_indices(z_index, subvol_dims[2], scaling_factor[2], margin[2])
 
         # Determine how much padding is needed before and after the volume
-        pad_before = max(0, -z_start)
-        pad_after = max(0, z_end - lr_depth)
+        pad_x_before, pad_x_after = max(0, -x_start), max(0, x_end - reference_height)
+        pad_y_before, pad_y_after = max(0, -y_start), max(0, y_end - reference_width)
+        pad_z_before, pad_z_after = max(0, -z_start), max(0, z_end - reference_depth)
 
-        # Apply padding to the reference volume if necessary
-        if pad_before > 0 or pad_after > 0:
-            arr_reference = np.pad(arr_reference, ((0, 0), (0, 0), (pad_before, pad_after)), mode='constant', constant_values=-1024)
-
+        arr_reference = np.pad(
+            arr_reference,
+            pad_width=((pad_x_before, pad_x_after), (pad_y_before, pad_y_after), (pad_z_before, pad_z_after)),
+            mode='constant',
+            constant_values=-1024
+        )
         # Adjust the start and end indices after padding
-        z_start += pad_before
-        z_end += pad_before
+        x_start += pad_x_before
+        x_end += pad_x_before
+        y_start += pad_y_before
+        y_end += pad_y_before
+        z_start += pad_z_before
+        z_end += pad_z_before
 
         # Normalize the reference volume between -1 and 1
         min_val = arr_reference.min() #-1024
@@ -245,38 +242,67 @@ class ImageDataset(Dataset):
 
         arr_reference = 2 * arr_reference - 1
         
-        arr_reference = arr_reference[:, :, z_start:z_end]
-        arr_reference = arr_reference[np.newaxis, ...]
+        # Extract the subvolume from the reference volume
+        arr_reference = arr_reference[x_start:x_end, y_start:y_end, z_start:z_end]
+        
 
         # Create the global positional encoding
-
-        global_z_position= np.arange(z_start-pad_before, z_end-pad_before)/lr_depth
+        global_x_position = np.arange(x_start-pad_x_before, x_end-pad_x_before)/reference_height
+        global_y_position = np.arange(y_start-pad_y_before, y_end-pad_y_before)/reference_width
+        global_z_position = np.arange(z_start-pad_z_before, z_end-pad_z_before)/reference_depth
 
         # Create a 3D positional embedding with the same dimensions as the reference
-        global_z_embedding = np.tile(global_z_position.reshape(1, 1, arr_reference.shape[-1]), (lr_depth, lr_depth, 1))
+        global_x_embedding = np.tile(global_x_position.reshape(-1, 1, 1), (1, arr_reference.shape[1], arr_reference.shape[2]))
+        global_y_embedding = np.tile(global_y_position.reshape(1, -1, 1), (arr_reference.shape[0], 1, arr_reference.shape[2]))
+        global_z_embedding = np.tile(global_z_position.reshape(1, 1, -1), (arr_reference.shape[0], arr_reference.shape[1], 1))
+
+        global_x_embedding = global_x_embedding[np.newaxis, ...]
+        global_y_embedding = global_y_embedding[np.newaxis, ...]
         global_z_embedding = global_z_embedding[np.newaxis, ...]
 
+        arr_reference = arr_reference[np.newaxis, ...]
+
+        global_embedding = np.concatenate([global_x_embedding, global_y_embedding, global_z_embedding], axis=0)
+
         # Concatenate the reference volume and the positional encoding
-        arr_reference = np.concatenate([arr_reference, global_z_embedding], axis=0)
+        arr_reference = np.concatenate([arr_reference, global_embedding], axis=0)
 
         return arr_reference
 
     def create_positional_embeddings(self, path):
-        #get the index of the image
-        index = int(path.split('/')[-1].split('_')[-1].split('.')[0])
+        # Extract x, y, and z indices from the file name
+        parts = path.split('/')[-1].split('_')
+        x_index, y_index, z_index = map(int, [parts[-3], parts[-2], parts[-1].split('.')[0]])
         
-        depth = 16
+        # Dimensions of subvolumes
+        subvol_height, subvol_width, subvol_depth = (128, 128, 16)
 
-        #create the positional embeddings
-        z_start = int(index * depth)
-        z_end = int(z_start + depth)
+        #full volume dimensions
+        full_depth, full_height, full_width = 256, 256, 256
 
-        global_z_position = (np.arange(z_start, z_end))/self.resolution
-        global_z_embedding = np.tile(global_z_position.reshape(1, 1, depth), (self.resolution, self.resolution, 1))
+        #calculate the starting and ending indices of the subvolume
+        z_start = int(z_index * subvol_depth)
+        z_end = int(z_start + subvol_depth)
+        y_start = int(y_index * subvol_height)
+        y_end = int(y_start + subvol_height)
+        x_start = int(x_index * subvol_width)
+        x_end = int(x_start + subvol_width)
+        
+        global_z_position = (np.arange(z_start, z_end))/full_depth
+        global_y_position = (np.arange(y_start, y_end))/full_height
+        global_x_position = (np.arange(x_start, x_end))/full_width
+
+        global_z_embedding = np.tile(global_z_position.reshape(1, 1, -1), (subvol_width, subvol_height, 1))
+        global_y_embedding = np.tile(global_y_position.reshape(1, -1, 1), (subvol_width, 1, subvol_depth))
+        global_x_embedding = np.tile(global_x_position.reshape(-1, 1, 1), (1, subvol_height, subvol_depth))
 
         global_z_embedding = global_z_embedding[np.newaxis, ...]
-        
-        return global_z_embedding
+        global_y_embedding = global_y_embedding[np.newaxis, ...]
+        global_x_embedding = global_x_embedding[np.newaxis, ...]
+
+        global_embedding = np.concatenate([global_x_embedding, global_y_embedding, global_z_embedding], axis=0)
+
+        return global_embedding
     
     def __len__(self):
         return len(self.local_images)
@@ -284,30 +310,18 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         
         path = self.local_images[idx]
-        if self.dataset_mode == 'nrrd':
-            ct_image = read_nrrd(path) 
-        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-            ct_image = read_nifti(path)
-        else:
-            raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
-
+        ct_image = read_nifti(path)
         out_dict = {}
 
         if self.local_classes is not None:
             class_path = self.local_classes[idx]
-            if self.dataset_mode == 'nrrd':
-                ct_class = read_nrrd(class_path)
-            elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-                ct_class = read_nifti(class_path)
-            else:
-                raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
-            
+            ct_class = read_nifti(class_path)         
 
-        if ct_image.shape[0] != self.resolution:
-            arr_image, arr_class = resize_arr([ct_image, ct_class], self.resolution)
-        else:
-            arr_image = ct_image
-            arr_class = ct_class
+        #if ct_image.shape[0] != self.resolution:
+        #    arr_image, arr_class = resize_arr([ct_image, ct_class], self.resolution)
+        #else:
+        arr_image = ct_image
+        arr_class = ct_class
 
         if self.random_flip and random.random() < 0.5:
             arr_image = arr_image[:, ::-1].copy()
