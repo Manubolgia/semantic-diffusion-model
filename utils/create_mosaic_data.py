@@ -73,7 +73,6 @@ def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new
         save_path = str(original_path).replace('cta', 'cta_mosaic').replace('annotation', 'annotation_mosaic')
         base_dir = os.path.dirname(save_path)
 
-        nib.save(nib.Nifti1Image(processed_subject['image'].data.numpy().squeeze(), affine=processed_subject['image'].affine), f"{base_dir}/{original_file_name}_resampled.nii.gz")
         # Ensure the directory exists
         os.makedirs(base_dir, exist_ok=True)
             
