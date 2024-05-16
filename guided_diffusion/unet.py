@@ -355,7 +355,7 @@ class SDMResBlock(CondTimestepBlock):
         #Reference!!!
         #------------------------#
         #self.in_norm_ref = SPADEGroupNorm(channels, 1)
-        self.in_norm_ref = SPADEGroupNorm(channels, 2)
+        self.in_norm_ref = SPADEGroupNorm(channels, 3)
         #------------------------#
         self.in_layers = nn.Sequential(
             SiLU(),
@@ -393,7 +393,7 @@ class SDMResBlock(CondTimestepBlock):
         #Reference!!!
         #------------------------#
         #self.out_norm_ref = SPADEGroupNorm(self.out_channels, 1)
-        self.out_norm_ref = SPADEGroupNorm(self.out_channels, 2)
+        self.out_norm_ref = SPADEGroupNorm(self.out_channels, 3)
         #------------------------#
         self.out_layers = nn.Sequential(
             SiLU(),
