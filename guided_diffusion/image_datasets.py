@@ -176,13 +176,8 @@ class ImageDataset(Dataset):
         self.pos_emb = pos_emb
 
     def get_affine(self):
-        if self.dataset_mode == 'nrrd':
-            return np.eye(4)
-        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-            return read_affine(self.local_images[0])
-        else:
-            raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
-    
+        return read_affine(self.local_images[0])
+        
     def create_reference(self, path):
         # Read the reference image path
         parts = path.replace('\\', '/').split('/')[-1].split('_')
