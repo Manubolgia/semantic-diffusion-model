@@ -930,7 +930,7 @@ class UNetModel(nn.Module):
 
         y = y.type(self.dtype)
         r = r.type(self.dtype)
-        h = x.type(self.dtype)
+        h = th.cat((x.type(self.dtype), y[:,-3:,...]), dim=1)
         for module in self.input_blocks:
             h = module(h, y, r, emb)
             hs.append(h)
