@@ -191,8 +191,10 @@ class ImageDataset(Dataset):
         x_index, y_index, z_index = map(int, [parts[-3], parts[-2], parts[-1].split('.')[0]])
         
         subvol_dims = (128, 128, 16)
-        margin = (8,8,8)
+        
         scaling_factor = (reference_height / 256, reference_width / 256, reference_depth / 256)
+
+        margin = (int(subvol_dims[0]*scaling_factor[0]), int(subvol_dims[1]*scaling_factor[1]), int(subvol_dims[2]*scaling_factor[2]))
 
         def calculate_lr_indices(index, dim_size, scaling_factor, margin):
             start = int(index*dim_size*scaling_factor)
