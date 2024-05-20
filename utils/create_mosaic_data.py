@@ -25,7 +25,7 @@ def calculate_target_size(files, new_spacing):
     return target_size
 
 
-def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new_spacing, crop_dims=256, subvol_dims=(128, 128, 16)):
+def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new_spacing, crop_dims=256, subvol_dims=(64, 64, 64)):
     # 1. Resample the images to the new spacing
     # 2. Crop or pad the images to the target size
     # 3. Resize the images 
@@ -70,7 +70,7 @@ def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new
         data = processed_subject[key].data
         original_path = getattr(subject, key).path
         original_file_name = os.path.splitext(os.path.basename(original_path))[0].replace('.img.nii', '.img').replace('.label.nii', '.label')
-        save_path = str(original_path).replace('cta', 'cta_mosaic').replace('annotation', 'annotation_mosaic')
+        save_path = str(original_path).replace('cta', 'cta_mosaic_64').replace('annotation', 'annotation_mosaic_64')
         base_dir = os.path.dirname(save_path)
 
         # Ensure the directory exists
