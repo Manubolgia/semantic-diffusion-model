@@ -191,38 +191,8 @@ class ImageDataset(Dataset):
         x_index, y_index, z_index = map(int, [parts[-3], parts[-2], parts[-1].split('.')[0]])
         
         subvol_dims = (128, 128, 16)
-        margin = (8,8,8)
+        #subvol_dims = (64, 64, 64)
         scaling_factor = (reference_height / 256, reference_width / 256, reference_depth / 256)
-
-        def calculate_lr_indices(index, dim_size, scaling_factor, margin):
-            start = int(index*dim_size*scaling_factor)
-            end = int(start + dim_size*scaling_factor)
-            start -= margin
-            end += margin
-            return start, end
-
-        x_start, x_end = calculate_lr_indices(x_index, subvol_dims[0], scaling_factor[0], margin[0])
-        y_start, y_end = calculate_lr_indices(y_index, subvol_dims[1], scaling_factor[1], margin[1])
-        z_start, z_end = calculate_lr_indices(z_index, subvol_dims[2], scaling_factor[2], margin[2])
-
-        # Determine how much padding is needed before and after the volume
-        pad_x_before, pad_x_after = max(0, -x_start), max(0, x_end - reference_height)
-        pad_y_before, pad_y_after = max(0, -y_start), max(0, y_end - reference_width)
-        pad_z_before, pad_z_after = max(0, -z_start), max(0, z_end - reference_depth)
-
-        arr_reference = np.pad(
-            arr_reference,
-            pad_width=((pad_x_before, pad_x_after), (pad_y_before, pad_y_after), (pad_z_before, pad_z_after)),
-            mode='constant',
-            constant_values=-1024
-        )
-        # Adjust the start and end indices after padding
-        x_start += pad_x_before
-        x_end += pad_x_before
-        y_start += pad_y_before
-        y_end += pad_y_before
-        z_start += pad_z_before
-        z_end += pad_z_before
 
         # Normalize the reference volume between -1 and 1
         min_val = arr_reference.min() #-1024
@@ -237,14 +207,10 @@ class ImageDataset(Dataset):
 
         arr_reference = 2 * arr_reference - 1
         
-        # Extract the subvolume from the reference volume
-        arr_reference = arr_reference[x_start:x_end, y_start:y_end, z_start:z_end]
-        
-
         # Create the global positional encoding
-        global_x_position = np.arange(x_start-pad_x_before, x_end-pad_x_before)/reference_height
-        global_y_position = np.arange(y_start-pad_y_before, y_end-pad_y_before)/reference_width
-        global_z_position = np.arange(z_start-pad_z_before, z_end-pad_z_before)/reference_depth
+        global_x_position = np.arange(reference_height)/reference_height
+        global_y_position = np.arange(reference_width)/reference_width
+        global_z_position = np.arange(reference_depth)/reference_depth
 
         # Create a 3D positional embedding with the same dimensions as the reference
         global_x_embedding = np.tile(global_x_position.reshape(-1, 1, 1), (1, arr_reference.shape[1], arr_reference.shape[2]))
@@ -255,12 +221,60 @@ class ImageDataset(Dataset):
         global_y_embedding = global_y_embedding[np.newaxis, ...]
         global_z_embedding = global_z_embedding[np.newaxis, ...]
 
+        # Create the attention map
+        
+        attention_map = np.zeros_like(arr_reference)
+
+        start_x = int(x_index*subvol_dims[0]*scaling_factor[0])
+        end_x = start_x + int(subvol_dims[0]*scaling_factor[0])
+        start_y = int(y_index*subvol_dims[1]*scaling_factor[1])
+        end_y = start_y + int(subvol_dims[1]*scaling_factor[1])
+        start_z = int(z_index*subvol_dims[2]*scaling_factor[2])
+        end_z = start_z + int(subvol_dims[2]*scaling_factor[2])
+        
+        attention_map[start_x:end_x, :, :] += 1
+        attention_map[:, start_y:end_y, :] += 1
+        attention_map[:, :, start_z:end_z] += 1
+        #attention_map[start_x:end_x, start_y:end_y, start_z:end_z] = 1
+
+        margin = (int(subvol_dims[0] * scaling_factor[0]), int(subvol_dims[1] * scaling_factor[1]), int(subvol_dims[2] * scaling_factor[2]))
+        
+        start_margin_x = max(0, start_x - margin[0])
+        end_margin_x = min(reference_height, end_x + margin[0])
+        start_margin_y = max(0, start_y - margin[1])
+        end_margin_y = min(reference_width, end_y + margin[1])
+        start_margin_z = max(0, start_z - margin[2])
+        end_margin_z = min(reference_depth, end_z + margin[2])
+
+        for i in range(start_margin_x, start_x):
+            attention_map[i, :, :] += 1 - abs(i - start_x) / margin[0]
+        for i in range(end_x, end_margin_x):
+            attention_map[i, :, :] += 1 - abs(i - end_x) / margin[0]
+
+        for i in range(start_margin_y, start_y):
+            attention_map[:, i, :] += 1 - abs(i - start_y) / margin[1]
+        for i in range(end_y, end_margin_y):
+            attention_map[:, i, :] += 1 - abs(i - end_y) / margin[1]
+        
+        for i in range(start_margin_z, start_z):
+            attention_map[:, :, i] += 1 - abs(i - start_z) / margin[2]
+        for i in range(end_z, end_margin_z):
+            attention_map[:, :, i] += 1 - abs(i - end_z) / margin[2]
+
+
+        #normalize the attention map
+        attention_map = attention_map / attention_map.max()
+        attention_map = np.clip(attention_map, 0, 1)
+
+
+        attention_map = attention_map[np.newaxis, ...]
+
         arr_reference = arr_reference[np.newaxis, ...]
 
         global_embedding = np.concatenate([global_x_embedding, global_y_embedding, global_z_embedding], axis=0)
 
         # Concatenate the reference volume and the positional encoding
-        arr_reference = np.concatenate([arr_reference, global_embedding], axis=0)
+        arr_reference = np.concatenate([arr_reference, attention_map, global_embedding], axis=0)
 
         return arr_reference
 
