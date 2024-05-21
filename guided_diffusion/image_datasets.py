@@ -69,6 +69,10 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_mosaic', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_mosaic', 'training' if is_train else 'validation'))
         instances = None   
+    elif dataset_mode == 'nifti_mosaic' and image_size == 64:
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_mosaic_64', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_mosaic_64', 'training' if is_train else 'validation'))
+        instances = None
     elif dataset_mode == 'all':
         all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
@@ -182,7 +186,10 @@ class ImageDataset(Dataset):
         # Read the reference image path
         parts = path.replace('\\', '/').split('/')[-1].split('_')
         reference_path = parts[0] + '.nii.gz'
-        reference_path = os.path.join(os.path.dirname(path).replace('cta_mosaic', 'cta_reference'), reference_path)
+        if self.resolution != 64:
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_mosaic', 'cta_reference'), reference_path)
+        else:
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_mosaic_64', 'cta_reference'), reference_path)
 
         arr_reference = read_nifti(reference_path).astype(np.float32)
         reference_height, reference_width, reference_depth = arr_reference.shape
