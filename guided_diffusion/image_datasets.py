@@ -65,10 +65,14 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr176', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr176', 'training' if is_train else 'validation'))
         instances = None        
-    elif dataset_mode == 'nifti_mosaic':
+    elif dataset_mode == 'nifti_mosaic' and image_size == 128:
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_mosaic', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_mosaic', 'training' if is_train else 'validation'))
         instances = None   
+    elif dataset_mode == 'nifti_mosaic' and image_size == 64:
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_mosaic_64', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_mosaic_64', 'training' if is_train else 'validation'))
+        instances = None
     elif dataset_mode == 'all':
         all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
@@ -182,7 +186,11 @@ class ImageDataset(Dataset):
         # Read the reference image path
         parts = path.replace('\\', '/').split('/')[-1].split('_')
         reference_path = parts[0] + '.nii.gz'
-        reference_path = os.path.join(os.path.dirname(path).replace('cta_mosaic', 'cta_reference'), reference_path)
+
+        if self.resolution == 128:
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_mosaic', 'cta_reference'), reference_path)
+        elif self.resolution == 64:
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_mosaic_64', 'cta_reference'), reference_path)
 
         arr_reference = read_nifti(reference_path).astype(np.float32)
         reference_height, reference_width, reference_depth = arr_reference.shape
@@ -190,8 +198,11 @@ class ImageDataset(Dataset):
         # Extract the image index from the path
         x_index, y_index, z_index = map(int, [parts[-3], parts[-2], parts[-1].split('.')[0]])
         
-        subvol_dims = (128, 128, 16)
-        #subvol_dims = (64, 64, 64)
+        if self.resolution == 128:
+            subvol_dims = (128, 128, 16)
+        elif self.resolution == 64:
+            subvol_dims = (64, 64, 64)
+
         scaling_factor = (reference_height / 256, reference_width / 256, reference_depth / 256)
 
         # Normalize the reference volume between -1 and 1
@@ -284,7 +295,10 @@ class ImageDataset(Dataset):
         x_index, y_index, z_index = map(int, [parts[-3], parts[-2], parts[-1].split('.')[0]])
         
         # Dimensions of subvolumes
-        subvol_height, subvol_width, subvol_depth = (128, 128, 16)
+        if self.resolution == 128:
+            subvol_height, subvol_width, subvol_depth = (128, 128, 16)
+        elif self.resolution == 64:
+            subvol_height, subvol_width, subvol_depth = (64, 64, 64)
 
         #full volume dimensions
         full_depth, full_height, full_width = 256, 256, 256
