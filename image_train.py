@@ -52,6 +52,9 @@ def main():
         pos_emb=args.pos_emb
     )
 
+    logger.log("After loading data...")
+    logger.log(torch.cuda.memory_summary())
+
     logger.log("training...")
     TrainLoop(
         model=model,
