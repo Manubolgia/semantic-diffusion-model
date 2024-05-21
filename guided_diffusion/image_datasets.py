@@ -383,7 +383,7 @@ class ImageDataset(Dataset):
         if self.local_reference is not False:
              out_dict['reference'] = self.create_reference(path)
         # -------------------
-
+        print('image: ', arr_image.shape, 'label: ', arr_class.shape, 'reference: ', out_dict['reference'].shape, 'positional_encoding: ', positional_encoding.shape)
         return arr_image, out_dict 
 
 def read_nrrd(file_path):
