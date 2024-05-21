@@ -848,6 +848,8 @@ class GaussianDiffusion:
             model_output = model(x_t, self._scale_timesteps(t), y=model_kwargs['y'], r=model_kwargs['reference'])
             
             from guided_diffusion import logger
+            logger.log("right before backward pass, inside training_losses")
+            logger.log('image: ', model_output.shape, 'label: ', model_kwargs['y'].shape, 'reference: ', model_kwargs['reference'].shape)
             logger.log(th.cuda.memory_summary())
 
             if self.model_var_type in [

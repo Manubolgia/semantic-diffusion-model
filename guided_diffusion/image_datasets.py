@@ -8,6 +8,7 @@ import blobfile as bf
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
 from scipy.ndimage import zoom
+import torch as th
 
 from guided_diffusion import logger
 
@@ -367,12 +368,20 @@ class ImageDataset(Dataset):
         # Scale to [-1, 1]
         arr_image = 2 * arr_image - 1
 
+        from guided_diffusion import logger
+        logger.log("Image datasets")
+        logger.log(th.cuda.memory_summary())
+
         # Positional encoding
         # -------------------
         if self.pos_emb is not False:
             positional_encoding = self.create_positional_embeddings(path)
             out_dict['positional_encoding'] = positional_encoding
         # -------------------
+
+        from guided_diffusion import logger
+        logger.log("Image datasets, after positional encoding")
+        logger.log(th.cuda.memory_summary())
 
         out_dict['path'] = path
         out_dict['label_ori'] = arr_class.copy()
@@ -383,7 +392,9 @@ class ImageDataset(Dataset):
         if self.local_reference is not False:
              out_dict['reference'] = self.create_reference(path)
         # -------------------
-        logger.log('image: ', arr_image.shape, 'label: ', arr_class.shape, 'reference: ', out_dict['reference'].shape, 'positional_encoding: ', positional_encoding.shape)
+        from guided_diffusion import logger
+        logger.log("Image datasets, after reference")
+        logger.log(th.cuda.memory_summary())
         return arr_image, out_dict 
 
 def read_nrrd(file_path):
