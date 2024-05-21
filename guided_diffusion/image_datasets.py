@@ -1,16 +1,16 @@
 import os
-import math
 import random
 
 import nrrd
 import nibabel as nib
 
-from PIL import Image
 import blobfile as bf
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
-import torch
 from scipy.ndimage import zoom
+
+from guided_diffusion import logger
+
 
 
 
@@ -383,7 +383,7 @@ class ImageDataset(Dataset):
         if self.local_reference is not False:
              out_dict['reference'] = self.create_reference(path)
         # -------------------
-        print('image: ', arr_image.shape, 'label: ', arr_class.shape, 'reference: ', out_dict['reference'].shape, 'positional_encoding: ', positional_encoding.shape)
+        logger.log('image: ', arr_image.shape, 'label: ', arr_class.shape, 'reference: ', out_dict['reference'].shape, 'positional_encoding: ', positional_encoding.shape)
         return arr_image, out_dict 
 
 def read_nrrd(file_path):
