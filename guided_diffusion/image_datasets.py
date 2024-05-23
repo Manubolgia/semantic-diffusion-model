@@ -70,8 +70,10 @@ def load_data(
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_mosaic', 'training' if is_train else 'validation'))
         instances = None   
     elif dataset_mode == 'nifti_mosaic' and image_size == 64:
-        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_mosaic_64', 'training' if is_train else 'validation'))
-        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_mosaic_64', 'training' if is_train else 'validation'))
+        #all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_mosaic_64', 'training' if is_train else 'validation'))
+        #classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_mosaic_64', 'training' if is_train else 'validation'))
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta128_mosaic64', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation128_mosaic64', 'training' if is_train else 'validation'))
         instances = None
     elif dataset_mode == 'all':
         all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
@@ -190,7 +192,7 @@ class ImageDataset(Dataset):
         if self.resolution == 128:
             reference_path = os.path.join(os.path.dirname(path).replace('cta_mosaic', 'cta_reference'), reference_path)
         elif self.resolution == 64:
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_mosaic_64', 'cta_reference'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('cta128_mosaic64', 'cta_reference'), reference_path)
 
         arr_reference = read_nifti(reference_path).astype(np.float32)
         reference_height, reference_width, reference_depth = arr_reference.shape
@@ -203,7 +205,9 @@ class ImageDataset(Dataset):
         elif self.resolution == 64:
             subvol_dims = (64, 64, 64)
 
-        scaling_factor = (reference_height / 256, reference_width / 256, reference_depth / 256)
+        image_dims = (128, 128, 128)
+
+        scaling_factor = (reference_height / image_dims[0], reference_width / image_dims[1], reference_depth / image_dims[2])
 
         # Normalize the reference volume between -1 and 1
         min_val = arr_reference.min() #-1024
@@ -301,7 +305,7 @@ class ImageDataset(Dataset):
             subvol_height, subvol_width, subvol_depth = (64, 64, 64)
 
         #full volume dimensions
-        full_depth, full_height, full_width = 256, 256, 256
+        full_depth, full_height, full_width = (128, 128, 128)
 
         #calculate the starting and ending indices of the subvolume
         z_start = int(z_index * subvol_depth)
