@@ -25,7 +25,7 @@ def calculate_target_size(files, new_spacing):
     return target_size
 
 
-def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new_spacing, crop_dims, hr=False, ref=False, depth=16):
+def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new_spacing, crop_dims, hr=False, ref=False, depth=4):
     # 1. Resample the images to the new spacing
     # 2. Crop or pad the images to the target size
     # 3. Resize (hr=False) or split the images into sub-volumes of D=depth (hr=True)
@@ -78,12 +78,12 @@ def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new
                 os.makedirs(os.path.dirname(save_path), exist_ok=True)
                 nib.save(nib.Nifti1Image(resized_subject[key].data.numpy().squeeze(), affine=resized_subject[key].affine), save_path)
         else:
-            #processed_subject = tio.Resize((crop_dims, crop_dims, crop_dims), image_interpolation='linear')(processed_subject)
+            processed_subject = tio.Resize((crop_dims, crop_dims, crop_dims), image_interpolation='linear')(processed_subject)
             # Process for HR scenario with slices of depth D
             for key in ['image', 'label']:
                 original_path = getattr(subject, key).path
                 original_file_name = os.path.splitext(os.path.basename(original_path))[0].replace('.img.nii', '.img').replace('.label.nii', '.label')
-                save_path = str(original_path).replace('cta', 'cta_processed_hr176').replace('annotation', 'annotation_processed_hr176')
+                save_path = str(original_path).replace('cta', 'cta_processed_hr256').replace('annotation', 'annotation_processed_hr_256')
                 base_dir = os.path.dirname(save_path)
             
                 # Calculate the number of sub-volumes
