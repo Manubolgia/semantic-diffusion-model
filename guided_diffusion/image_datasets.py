@@ -57,13 +57,13 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
         instances = None
-    elif dataset_mode == 'nifti_hr' and image_size != 176:
+    elif dataset_mode == 'nifti_hr' and image_size != 256:
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr', 'training' if is_train else 'validation'))
         instances = None    
-    elif dataset_mode == 'nifti_hr' and image_size == 176:
-        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr176', 'training' if is_train else 'validation'))
-        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr176', 'training' if is_train else 'validation'))
+    elif dataset_mode == 'nifti_hr' and image_size == 256:
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr256', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr256', 'training' if is_train else 'validation'))
         instances = None        
     elif dataset_mode == 'all':
         all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
@@ -182,8 +182,8 @@ class ImageDataset(Dataset):
     def create_reference(self, path):
         # Read the reference image path
         reference_path = path.replace('\\', '/').split('/')[-1].split('_')[0] + '.nii.gz'
-        if self.resolution == 176:
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
+        if self.resolution == 256:
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr256', 'cta_reference'), reference_path)
         else:
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
 
@@ -200,10 +200,10 @@ class ImageDataset(Dataset):
         # Extract the image index from the path
         index = int(path.split('/')[-1].split('_')[-1].split('.')[0])
 
-        depth = 16  # Define the depth per HR patch
+        depth = 4  # Define the depth per HR patch
         # Determine the scaling factor and the number of images based on the resolution
-        if self.resolution == 176:
-            original_depth = 144
+        if self.resolution == 256:
+            original_depth = 256
             lr_depth = arr_reference.shape[2]
         elif self.resolution == 128:
             original_depth = 128
@@ -240,7 +240,9 @@ class ImageDataset(Dataset):
         end = start + int(depth*lr_depth/original_depth)
         attention_map[:, :, start:end] = 1
 
-        margin = 8
+        #margin = int(depth *  lr_depth / original_depth)
+        margin = int(4*depth *  lr_depth / original_depth)
+
         start_margin = max(0, start - margin)
         end_margin = min(lr_depth, end + margin)
 
@@ -263,7 +265,7 @@ class ImageDataset(Dataset):
         #get the index of the image
         index = int(path.split('/')[-1].split('_')[-1].split('.')[0])
         
-        depth = 16
+        depth = 4
 
         #create the positional embeddings
         z_start = int(index * depth)
