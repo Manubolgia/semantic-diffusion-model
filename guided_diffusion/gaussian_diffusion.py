@@ -292,7 +292,7 @@ class GaussianDiffusion:
             #Reference!!!
             #------------------------#
             if 'reference' in model_kwargs:
-                model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']), r=model_kwargs['reference'])
+                model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']), r=th.zeros_like(model_kwargs['reference']))
             #------------------------#
             else:
                 model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']))
