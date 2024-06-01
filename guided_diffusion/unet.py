@@ -503,7 +503,7 @@ class SDMResBlock(CondTimestepBlock):
             h2 = self.out_norm_ref(h, r)
             h = self.out_layers(h1+h2)
             #-----------v3-----------#
-            #h = self.out_norm_ref(h, r)S
+            #h = self.out_norm_ref(h, r)
             #h = self.out_norm(h, cond)
             #h = self.out_layers(h)
             #----- No Semantics -----#
