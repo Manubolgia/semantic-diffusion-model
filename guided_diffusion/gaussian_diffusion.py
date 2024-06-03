@@ -288,12 +288,12 @@ class GaussianDiffusion:
         else:
             model_output = model(x, self._scale_timesteps(t))
         #------------------------#
-        if 's' in model_kwargs and model_kwargs['s'] > 1.0:
+        if 's' in model_kwargs and model_kwargs['s'] != 1.0:
             #Reference!!!
             #------------------------#
             if 'reference' in model_kwargs:
-                model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']), r=model_kwargs['reference'])
-                #model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']), r=th.zeros_like(model_kwargs['reference']))
+                #model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']), r=model_kwargs['reference'])
+                model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']), r=th.zeros_like(model_kwargs['reference']))
             #------------------------#
             else:
                 model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']))
