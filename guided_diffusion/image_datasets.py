@@ -57,14 +57,14 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
         instances = None
-    elif dataset_mode == 'nifti_hr' and image_size != 176:
-        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr', 'training' if is_train else 'validation'))
-        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr', 'training' if is_train else 'validation'))
-        instances = None    
     #elif dataset_mode == 'nifti_hr' and image_size != 176:
-    #    all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_hr', 'training' if is_train else 'validation'))
-    #    classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_hr', 'training' if is_train else 'validation'))
-    #    instances = None 
+    #    all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr', 'training' if is_train else 'validation'))
+    #    classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr', 'training' if is_train else 'validation'))
+    #    instances = None    
+    elif dataset_mode == 'nifti_hr' and image_size != 176:
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_hr', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_hr', 'training' if is_train else 'validation'))
+        instances = None 
     elif dataset_mode == 'nifti_hr' and image_size == 176:
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr176', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr176', 'training' if is_train else 'validation'))
@@ -189,8 +189,8 @@ class ImageDataset(Dataset):
         if self.resolution == 176:
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
         else:
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
-            #reference_path = os.path.join(os.path.dirname(path).replace('cta_hr', 'cta_reference'), reference_path)
+            #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_hr', 'cta_reference'), reference_path)
 
         # Load the appropriate dataset mode
         if self.dataset_mode == 'nrrd':
@@ -321,19 +321,19 @@ class ImageDataset(Dataset):
 
         arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
         
-        min_val = arr_image.min() #-1024
-        max_val = arr_image.max() #3071 
+        #min_val = arr_image.min() #-1024
+        #max_val = arr_image.max() #3071 
 
         # Normalize to [0, 1]
-        if max_val != min_val:
-            arr_image[arr_image > max_val] = max_val
-            arr_image[arr_image < min_val] = min_val
-            arr_image = (arr_image - min_val) / (max_val - min_val)
-        else:
-            arr_image = np.zeros_like(arr_image)
+        #if max_val != min_val:
+        #    arr_image[arr_image > max_val] = max_val
+        #    arr_image[arr_image < min_val] = min_val
+        #    arr_image = (arr_image - min_val) / (max_val - min_val)
+        #else:
+        #    arr_image = np.zeros_like(arr_image)
 
         # Scale to [-1, 1]
-        arr_image = 2 * arr_image - 1
+        #arr_image = 2 * arr_image - 1
 
         # Positional encoding
         # -------------------
