@@ -68,6 +68,8 @@ def load_data(
     elif dataset_mode == 'nifti_mosaic' and image_size == 64:
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_mosaic_64', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_mosaic_64', 'training' if is_train else 'validation'))
+        #all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta128_mosaic64', 'training' if is_train else 'validation'))
+        #classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation128_mosaic64', 'training' if is_train else 'validation'))
         instances = None
     elif dataset_mode == 'nifti_mosaic' and image_size == 128:
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_mosaic', 'training' if is_train else 'validation'))
