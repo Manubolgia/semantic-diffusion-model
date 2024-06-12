@@ -189,8 +189,8 @@ class ImageDataset(Dataset):
         if self.resolution == 176:
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
         else:
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
-            #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
+            #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_hr', 'cta_reference'), reference_path)
 
@@ -223,7 +223,7 @@ class ImageDataset(Dataset):
         z_end = int(z_start + depth*lr_depth/original_depth)
 
         # Add margin before and after the slice
-        margin = 4#8
+        margin = 8
         z_start -= margin
         z_end += margin
 
