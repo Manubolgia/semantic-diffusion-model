@@ -55,7 +55,7 @@ def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new
     processed_subject['label'] = label_crop_or_pad(resampled_subject['label'])
     
     # Normalize the image data
-    processed_subject['image'].set_data(normalize_image(processed_subject['image'][tio.DATA]))
+    #processed_subject['image'].set_data(normalize_image(processed_subject['image'][tio.DATA]))
 
     # Resize for non-HR scenario
     if not hr:
