@@ -121,8 +121,8 @@ if __name__ == "__main__":
 
     for set_type in sets:
         image_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'cta', set_type))
-        label_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation', set_type))
-        #label_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation_dilated', set_type))
+        #label_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation', set_type))
+        label_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'annotation_dilated', set_type))
 
         image_paths.sort()
         label_paths.sort()
