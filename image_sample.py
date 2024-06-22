@@ -128,9 +128,9 @@ def main():
             affine = get_affine(args.dataset_mode, affine_path[j])
             
 
-            #nib.save(nib.Nifti1Image(np_image.astype(np.int16), affine), file_image_path)
+            nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
             nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
-            #nib.save(nib.Nifti1Image(np_label.astype(np.int16), affine), file_label_path)
+            nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
 
         
         if args.history:
