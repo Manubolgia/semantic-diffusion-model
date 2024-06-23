@@ -321,7 +321,6 @@ class ImageDataset(Dataset):
         if self.random_flip and random.random() < 0.5:
             arr_image = arr_image[:, ::-1].copy()
             arr_class = arr_class[:, ::-1].copy()
-            arr_reference = arr_reference[:, ::-1].copy()
 
         arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
         
