@@ -175,19 +175,12 @@ class ImageDataset(Dataset):
         return len(self.local_images)
 
     def __getitem__(self, idx):
-        
+            
         path = self.local_images[idx]
         if self.dataset_mode == 'nrrd':
             ct_image = read_nrrd(path) 
         elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
             ct_image = read_nifti(path)
-        elif self.dataset_mode == 'all':
-            if path.endswith('.nrrd'):
-                ct_image = read_nrrd(path)
-            elif path.endswith('.nii.gz'):
-                ct_image = read_nifti(path)
-            else:
-                raise NotImplementedError('{} not implemented'.format(path))
         else:
             raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
 
@@ -199,16 +192,9 @@ class ImageDataset(Dataset):
                 ct_class = read_nrrd(class_path)
             elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
                 ct_class = read_nifti(class_path)
-            elif self.dataset_mode == 'all':
-                if class_path.endswith('.nrrd'):
-                    ct_class = read_nrrd(class_path)
-                elif class_path.endswith('.nii.gz'):
-                    ct_class = read_nifti(class_path)
-                else:
-                    raise NotImplementedError('{} not implemented'.format(class_path))
             else:
                 raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
-
+            
 
         if ct_image.shape[0] != self.resolution:
             arr_image, arr_class = resize_arr([ct_image, ct_class], self.resolution)
@@ -216,27 +202,19 @@ class ImageDataset(Dataset):
             arr_image = ct_image
             arr_class = ct_class
 
-        #if self.is_train:
-            #if self.random_crop:
-            #    arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
-            #else:
-            #    arr_image, arr_class = center_crop_arr([nrrd_image, nrrd_class], self.resolution)
-        #else:
-            #arr_image, arr_class = random_crop_arr([nrrd_image, nrrd_class], self.resolution)
-
         if self.random_flip and random.random() < 0.5:
             arr_image = arr_image[:, ::-1].copy()
             arr_class = arr_class[:, ::-1].copy()
 
-
         arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
-        #arr_image = arr_image.astype(np.float32)
         
-        min_val = arr_image.min()
-        max_val = arr_image.max()
+        min_val = arr_image.min() #-1024
+        max_val = arr_image.max() #3071 
 
         # Normalize to [0, 1]
         if max_val != min_val:
+            arr_image[arr_image > max_val] = max_val
+            arr_image[arr_image < min_val] = min_val
             arr_image = (arr_image - min_val) / (max_val - min_val)
         else:
             arr_image = np.zeros_like(arr_image)
