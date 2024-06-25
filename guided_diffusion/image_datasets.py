@@ -190,8 +190,8 @@ class ImageDataset(Dataset):
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
         else:
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
-            #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
+            #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_hr', 'cta_reference'), reference_path)
 
         # Load the appropriate dataset mode
@@ -250,6 +250,7 @@ class ImageDataset(Dataset):
         else:
             arr_reference = np.zeros_like(arr_reference)
 
+        #0 - 1 -> -1 - 1
         arr_reference = 2 * arr_reference - 1
         
         arr_reference = arr_reference[:, :, z_start:z_end]
