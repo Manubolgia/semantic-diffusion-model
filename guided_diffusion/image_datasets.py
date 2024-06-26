@@ -284,10 +284,10 @@ class ImageDataset(Dataset):
         z_end = int(z_start + depth)
 
         global_z_position = (np.arange(z_start, z_end))/self.resolution
-        global_z_position = 2 * (global_z_position - 0.5)
+        #global_z_position = 2 * (global_z_position - 0.5)
         global_z_embedding = np.tile(global_z_position.reshape(1, 1, depth), (self.resolution, self.resolution, 1))
 
-        #global_z_embedding = global_z_embedding[np.newaxis, ...]
+        global_z_embedding = global_z_embedding[np.newaxis, ...]
         
         return global_z_embedding
     
