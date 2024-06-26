@@ -223,7 +223,10 @@ class ImageDataset(Dataset):
         z_end = int(z_start + depth*lr_depth/original_depth)
 
         # Add margin before and after the slice
-        margin = 8
+        if lr_depth == 64:
+            margin = 8
+        elif lr_depth == 32:
+            margin = 4
         z_start -= margin
         z_end += margin
 
