@@ -44,43 +44,26 @@ The original data needs to be preprocessed:
 
 The folder structure should be as follows:
 1. Low resolution data
-
 Imagecas
-
 ├── cta_processed
-
 │   ├── training
-
 │   ├── validation
-
 └── annotation_processed
-
     ├── training
-
     ├── validation
-
 
 2. High resolution data
-
 Imagecas
-
 ├── cta_processed_hr
-
 │   ├── training
-
 │   ├── validation
-
 ├── annotation_processed_hr
-
 │   ├── training
-
 │   ├── validation
-
 └── cta_reference
-
     ├── training
-
     ├── validation
+
 
 
 ### Training and Test
