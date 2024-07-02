@@ -2,10 +2,8 @@ import os
 import math
 import random
 
-import nrrd
 import nibabel as nib
 
-from PIL import Image
 import blobfile as bf
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
@@ -22,7 +20,7 @@ def load_data(
     image_size,
     class_cond=False,
     deterministic=False,
-    random_crop=False, #augmentation
+    random_crop=False,
     random_flip=False,
     is_train=True,
     reference=False,
@@ -49,11 +47,7 @@ def load_data(
     if not data_dir:
         raise ValueError("unspecified data directory")
 
-    if dataset_mode == 'nrrd':
-        all_files = _list_nrrd_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
-        classes = _list_nrrd_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
-        instances = None
-    elif dataset_mode == 'nifti':
+    if dataset_mode == 'nifti':
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
         instances = None
@@ -61,18 +55,10 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr', 'training' if is_train else 'validation'))
         instances = None    
-    #elif dataset_mode == 'nifti_hr' and image_size != 176:
-    #    all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_hr', 'training' if is_train else 'validation'))
-    #    classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_hr', 'training' if is_train else 'validation'))
-    #    instances = None 
     elif dataset_mode == 'nifti_hr' and image_size == 176:
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr176', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr176', 'training' if is_train else 'validation'))
         instances = None        
-    elif dataset_mode == 'all':
-        all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
-        classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
-        instances = None
     else:
         raise NotImplementedError('{} not implemented'.format(dataset_mode))
 
@@ -102,21 +88,6 @@ def load_data(
     while True:
         yield from loader
 
-def _list_nrrd_files_recursively(data_dir):
-    """""
-    List all nrrd files recursively
-        
-    """""
-    results = []
-    for entry in sorted(bf.listdir(data_dir)):
-        full_path = bf.join(data_dir, entry)
-        ext = entry.split(".")[-1]
-        if "." in entry and ext.lower() == "nrrd":
-            results.append(full_path)
-        elif bf.isdir(full_path):
-            results.extend(_list_nrrd_files_recursively(full_path))
-    return results
-
 def _list_nifti_files_recursively(data_dir):
     """""
     List all nifti files recursively
@@ -130,21 +101,6 @@ def _list_nifti_files_recursively(data_dir):
             results.append(full_path)
         elif bf.isdir(full_path):
             results.extend(_list_nifti_files_recursively(full_path))
-    return results
-
-def _list_all_files_recursively(data_dir):
-    """""
-    List all nrrd and nifti files recursively
-
-    """""
-    results = []
-    for entry in sorted(bf.listdir(data_dir)):
-        full_path = bf.join(data_dir, entry)
-        ext = entry.split(".")[-1]
-        if "." in entry and (ext.lower() == "nrrd" or ext.lower() == "gz"):
-            results.append(full_path)
-        elif bf.isdir(full_path):
-            results.extend(_list_all_files_recursively(full_path))
     return results
 
 class ImageDataset(Dataset):
@@ -174,14 +130,6 @@ class ImageDataset(Dataset):
         self.random_crop = random_crop
         self.random_flip = random_flip
         self.pos_emb = pos_emb
-
-    def get_affine(self):
-        if self.dataset_mode == 'nrrd':
-            return np.eye(4)
-        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-            return read_affine(self.local_images[0])
-        else:
-            raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
     
     def create_reference(self, path):
         # Read the reference image path
@@ -189,15 +137,12 @@ class ImageDataset(Dataset):
         if self.resolution == 176:
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
         else:
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
+            #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
-            #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
-            #reference_path = os.path.join(os.path.dirname(path).replace('cta_hr', 'cta_reference'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
 
         # Load the appropriate dataset mode
-        if self.dataset_mode == 'nrrd':
-            arr_reference = read_nrrd(reference_path)
-        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+        if self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
             arr_reference = read_nifti(reference_path)
         else:
             raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
@@ -262,7 +207,7 @@ class ImageDataset(Dataset):
         # Create the global positional encoding
 
         global_z_position= np.arange(z_start-pad_before, z_end-pad_before)/lr_depth
-        #global_z_position = 2 * (global_z_position - 0.5)
+        global_z_position = 2 * (global_z_position - 0.5)
 
         # Create a 3D positional embedding with the same dimensions as the reference
         global_z_embedding = np.tile(global_z_position.reshape(1, 1, arr_reference.shape[-1]), (lr_depth, lr_depth, 1))
@@ -284,7 +229,7 @@ class ImageDataset(Dataset):
         z_end = int(z_start + depth)
 
         global_z_position = (np.arange(z_start, z_end))/self.resolution
-        #global_z_position = 2 * (global_z_position - 0.5)
+        global_z_position = 2 * (global_z_position - 0.5)
         global_z_embedding = np.tile(global_z_position.reshape(1, 1, depth), (self.resolution, self.resolution, 1))
 
         global_z_embedding = global_z_embedding[np.newaxis, ...]
@@ -297,9 +242,7 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         
         path = self.local_images[idx]
-        if self.dataset_mode == 'nrrd':
-            ct_image = read_nrrd(path) 
-        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+        if self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
             ct_image = read_nifti(path)
         else:
             raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
@@ -308,9 +251,7 @@ class ImageDataset(Dataset):
 
         if self.local_classes is not None:
             class_path = self.local_classes[idx]
-            if self.dataset_mode == 'nrrd':
-                ct_class = read_nrrd(class_path)
-            elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+            if self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
                 ct_class = read_nifti(class_path)
             else:
                 raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
@@ -322,9 +263,9 @@ class ImageDataset(Dataset):
             arr_image = ct_image
             arr_class = ct_class
 
-        if self.random_flip and random.random() < 0.5:
-            arr_image = arr_image[:, ::-1].copy()
-            arr_class = arr_class[:, ::-1].copy()
+        #if self.random_flip and random.random() < 0.5:
+        #    arr_image = arr_image[:, ::-1].copy()
+        #    arr_class = arr_class[:, ::-1].copy()
 
         arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
         
@@ -361,26 +302,12 @@ class ImageDataset(Dataset):
 
         return arr_image, out_dict 
 
-def read_nrrd(file_path):
-    """
-    Read nrrd file and return numpy array
-    """
-    data, header = nrrd.read(file_path)
-    return data
-
 def read_nifti(file_path):
     """
     Read nifti file and return numpy array, analog to read_nrrd
     """
     data = nib.load(file_path).get_fdata()
     return data
-
-def read_affine(file_path):
-    """
-    Read nifti file and return numpy array, analog to read_nrrd
-    """
-    affine = nib.load(file_path).affine
-    return affine
 
 def resize_arr(np_list, image_size):
 

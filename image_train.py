@@ -30,13 +30,6 @@ def main():
         **args_to_dict(args, model_and_diffusion_defaults().keys())
     )
     model.to(dist_util.dev())
-
-    #for i, module in enumerate(model.input_blocks):
-    #    print(f"Module {i}: {module}")
-    #for i, module in enumerate(model.middle_block):
-    #    print(f"Module {i}: {module}")
-    #for i, module in enumerate(model.output_blocks):
-    #    print(f"Module {i}: {module}")
        
     schedule_sampler = create_named_schedule_sampler(args.schedule_sampler, diffusion)
 

@@ -41,18 +41,6 @@ def get_named_beta_schedule(schedule_name, num_diffusion_timesteps):
             num_diffusion_timesteps,
             lambda t: math.cos((t + 0.008) / 1.008 * math.pi / 2) ** 2,
         )
-    elif schedule_name == "sigmoid":
-        scale = 1500 / num_diffusion_timesteps
-
-        start=0.0001 * scale
-        end=0.025 * scale
-        sigmoid_range = end - start
-
-        t = np.linspace(-6, 6, num_diffusion_timesteps)
-
-        beta_schedule = start + sigmoid_range / (1 + np.exp(-t))
-        
-        return beta_schedule
     else:
         raise NotImplementedError(f"unknown beta schedule: {schedule_name}")
 
@@ -277,7 +265,7 @@ class GaussianDiffusion:
         #    model_output = model(x, self._scale_timesteps(t), y=model_kwargs['y'])
         #else:
         #    model_output = model(x, self._scale_timesteps(t), **model_kwargs)
-        #Reference!!!
+        #Reference
         #------------------------#
         if 'y' in model_kwargs and 'reference' in model_kwargs:
             model_output = model(x, self._scale_timesteps(t), y=model_kwargs['y'], r=model_kwargs['reference'])
@@ -289,7 +277,7 @@ class GaussianDiffusion:
             model_output = model(x, self._scale_timesteps(t))
         #------------------------#
         if 's' in model_kwargs and model_kwargs['s'] != 1.0:
-            #Reference!!!
+            #Reference
             #------------------------#
             if 'reference' in model_kwargs:
                 #model_output_zero = model(x, self._scale_timesteps(t), y=th.zeros_like(model_kwargs['y']), r=model_kwargs['reference'])
@@ -564,19 +552,6 @@ class GaussianDiffusion:
             img = noise
         else:
             img = th.randn(*shape, device=device)
-            
-            #full_volume_depth = batch_size*depth
-            #full_noise = th.randn(1, channels, height, width, full_volume_depth, device=device)
-            
-            # Ensure that the full depth is divisible by the desired depth
-            #assert full_volume_depth % depth == 0, "Full depth must be divisible by the subvolume depth"
-            
-            # Slice and reorganize into batch dimension
-            #slices = [full_noise[..., i*depth:(i+1)*depth] for i in range(batch_size)]
-            #img = th.cat(slices, dim=0)  # Shape: (num_slices, channels, height, width, depth)
-
-            # Ensure the number of slices matches the batch size
-            #assert img.shape[0] == batch_size, "Number of slices must match the batch size"
 
         if 'y' in model_kwargs:
             model_kwargs['y'] = model_kwargs['y'].to(device)

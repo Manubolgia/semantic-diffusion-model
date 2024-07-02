@@ -6,13 +6,10 @@ numpy array. This can be used to produce samples for FID evaluation.
 import argparse
 import os
 
-import nrrd
 import nibabel as nib
 import numpy as np
 
 import torch as th
-import torch.distributed as dist
-import torchvision as tv
 
 from guided_diffusion.image_datasets import load_data
 
