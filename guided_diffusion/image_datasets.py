@@ -2,13 +2,12 @@ import os
 import math
 import random
 
-import nrrd
 import nibabel as nib
 
-from PIL import Image
 import blobfile as bf
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
+import torch
 from scipy.ndimage import zoom
 
 
@@ -21,7 +20,7 @@ def load_data(
     image_size,
     class_cond=False,
     deterministic=False,
-    random_crop=False, #augmentation
+    random_crop=False,
     random_flip=False,
     is_train=True,
 ):
@@ -46,22 +45,10 @@ def load_data(
     if not data_dir:
         raise ValueError("unspecified data directory")
 
-    if dataset_mode == 'nrrd':
-        all_files = _list_nrrd_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
-        classes = _list_nrrd_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
-        instances = None
-    elif dataset_mode == 'nifti':
+    if dataset_mode == 'nifti':
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
-        instances = None
-    elif dataset_mode == 'nifti_hr':
-        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr', 'training' if is_train else 'validation'))
-        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr', 'training' if is_train else 'validation'))
         instances = None    
-    elif dataset_mode == 'all':
-        all_files = _list_all_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
-        classes = _list_all_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
-        instances = None
     else:
         raise NotImplementedError('{} not implemented'.format(dataset_mode))
 
@@ -89,20 +76,6 @@ def load_data(
     while True:
         yield from loader
 
-def _list_nrrd_files_recursively(data_dir):
-    """""
-    List all nrrd files recursively
-        
-    """""
-    results = []
-    for entry in sorted(bf.listdir(data_dir)):
-        full_path = bf.join(data_dir, entry)
-        ext = entry.split(".")[-1]
-        if "." in entry and ext.lower() == "nrrd":
-            results.append(full_path)
-        elif bf.isdir(full_path):
-            results.extend(_list_nrrd_files_recursively(full_path))
-    return results
 
 def _list_nifti_files_recursively(data_dir):
     """""
@@ -117,21 +90,6 @@ def _list_nifti_files_recursively(data_dir):
             results.append(full_path)
         elif bf.isdir(full_path):
             results.extend(_list_nifti_files_recursively(full_path))
-    return results
-
-def _list_all_files_recursively(data_dir):
-    """""
-    List all nrrd and nifti files recursively
-
-    """""
-    results = []
-    for entry in sorted(bf.listdir(data_dir)):
-        full_path = bf.join(data_dir, entry)
-        ext = entry.split(".")[-1]
-        if "." in entry and (ext.lower() == "nrrd" or ext.lower() == "gz"):
-            results.append(full_path)
-        elif bf.isdir(full_path):
-            results.extend(_list_all_files_recursively(full_path))
     return results
 
 class ImageDataset(Dataset):
@@ -158,28 +116,13 @@ class ImageDataset(Dataset):
         self.random_crop = random_crop
         self.random_flip = random_flip
 
-    def get_affine(self):
-        if self.dataset_mode == 'nrrd':
-            return np.eye(4)
-        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-            return read_affine(self.local_images[0])
-        elif self.dataset_mode == 'all':
-            if self.local_images[0].endswith('.nrrd'):
-                return np.eye(4)
-            elif self.local_images[0].endswith('.nii.gz'):
-                return read_affine(self.local_images[0])
-            else:
-                raise NotImplementedError('{} not implemented'.format(self.local_images[0]))
-    
     def __len__(self):
         return len(self.local_images)
 
     def __getitem__(self, idx):
             
         path = self.local_images[idx]
-        if self.dataset_mode == 'nrrd':
-            ct_image = read_nrrd(path) 
-        elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+        if self.dataset_mode == 'nifti':
             ct_image = read_nifti(path)
         else:
             raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
@@ -188,9 +131,7 @@ class ImageDataset(Dataset):
 
         if self.local_classes is not None:
             class_path = self.local_classes[idx]
-            if self.dataset_mode == 'nrrd':
-                ct_class = read_nrrd(class_path)
-            elif self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+            if self.dataset_mode == 'nifti':
                 ct_class = read_nifti(class_path)
             else:
                 raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
@@ -202,9 +143,9 @@ class ImageDataset(Dataset):
             arr_image = ct_image
             arr_class = ct_class
 
-        if self.random_flip and random.random() < 0.5:
-            arr_image = arr_image[:, ::-1].copy()
-            arr_class = arr_class[:, ::-1].copy()
+        #if self.random_flip and random.random() < 0.5:
+        #    arr_image = arr_image[:, ::-1].copy()
+        #    arr_class = arr_class[:, ::-1].copy()
 
         arr_image = np.expand_dims(arr_image, axis=0).astype(np.float32)
         
@@ -229,12 +170,6 @@ class ImageDataset(Dataset):
 
         return arr_image, out_dict 
 
-def read_nrrd(file_path):
-    """
-    Read nrrd file and return numpy array
-    """
-    data, header = nrrd.read(file_path)
-    return data
 
 def read_nifti(file_path):
     """
@@ -243,16 +178,13 @@ def read_nifti(file_path):
     data = nib.load(file_path).get_fdata()
     return data
 
-def read_affine(file_path):
-    """
-    Read nifti file and return numpy array, analog to read_nrrd
-    """
-    affine = nib.load(file_path).affine
-    return affine
-
 def resize_arr(np_list, image_size):
 
-    np_image, np_class = np_list
+    if len(np_list)>1:
+        np_image, np_class = np_list
+    elif len(np_list)==1:
+        np_image = np_list[0]
+        np_class = None
 
     def resize_image(image, target_size, resample_method):
 
@@ -265,7 +197,9 @@ def resize_arr(np_list, image_size):
         return zoom(image, zoom_factors, order=resample_method)
 
     arr_image = resize_image(np_image, image_size, 3)
-    arr_class = resize_image(np_class, image_size, 0)
+    arr_class = None
+    if np_class is not None:
+        arr_class = resize_image(np_class, image_size, 0)
 
     return arr_image, arr_class
 

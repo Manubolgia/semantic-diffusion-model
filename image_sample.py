@@ -6,13 +6,10 @@ numpy array. This can be used to produce samples for FID evaluation.
 import argparse
 import os
 
-import nrrd
 import nibabel as nib
 import numpy as np
 
 import torch as th
-import torch.distributed as dist
-import torchvision as tv
 
 from guided_diffusion.image_datasets import load_data
 
@@ -101,7 +98,7 @@ def main():
         all_samples.extend([sample.cpu().numpy() for sample in gathered_samples])
 
         for j in range(sample.shape[0]):
-            base_filename = '.'.join(cond['path'][0].split('/')[-1].split('.')[:-2])
+            base_filename = '.'.join(cond['path'][j].split('/')[-1].split('.')[:-2])
             #base_filename = str(len(all_samples) * args.batch_size)
             if args.dataset_mode == 'nrrd':
                 # Directories for saving NRRD files

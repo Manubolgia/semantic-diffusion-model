@@ -1,54 +1,33 @@
-# Semantic Image Synthesis via Diffusion Models (SDM)
+# High-Resolution CTCA Image Synthesis with Patched Semantically Conditioned Diffusion Models
 
 &nbsp;
 
-<img src='assets\results.png' align="left">  
+<img src='assets/figura_slice-02.png' align="left">
 
 &nbsp;
 
-<img src='assets/diffusion.png' align="left">
-
-&nbsp;
-
-### [Paper](https://arxiv.org/abs/2207.00050)
+### [Baseline Paper](https://arxiv.org/abs/2207.00050)
 
 [Weilun Wang](https://scholar.google.com/citations?hl=zh-CN&user=YfV4aCQAAAAJ), [Jianmin Bao](https://scholar.google.com/citations?hl=zh-CN&user=hjwvkYUAAAAJ), [Wengang Zhou](https://scholar.google.com/citations?hl=zh-CN&user=8s1JF8YAAAAJ), [Dongdong Chen](https://scholar.google.com/citations?hl=zh-CN&user=sYKpKqEAAAAJ), [Dong Chen](https://scholar.google.com/citations?hl=zh-CN&user=_fKSYOwAAAAJ), [Lu Yuan](https://scholar.google.com/citations?hl=zh-CN&user=k9TsUVsAAAAJ), [Houqiang Li](https://scholar.google.com/citations?hl=zh-CN&user=7sFMIKoAAAAJ),
 
-## Abstract
+## Overview
 
-We provide our PyTorch implementation of Semantic Image Synthesis via Diffusion Models (SDM). 
-In this paper, we propose a novel framework based on DDPM for semantic image synthesis.
-Unlike previous conditional diffusion model directly feeds the semantic layout and noisy image as input to a U-Net structure, which may not fully leverage the information in the input semantic mask,
-our framework processes semantic layout and noisy image differently.
-It feeds noisy image to the encoder of the U-Net structure while the semantic layout to the decoder by multi-layer spatially-adaptive normalization operators. 
-To further improve the generation quality and semantic interpretability in semantic image synthesis, we introduce the classifier-free guidance sampling strategy, which acknowledge the scores of an unconditional model for sampling process.
-Extensive experiments on three benchmark datasets demonstrate the effectiveness of our proposed method, achieving state-of-the-art performance in terms of fidelity (FID) and diversity (LPIPS).
+This research project is focused on generating synthetic computed tomography coronary angiography (CTCA) images with a patched, semantically conditioned diffusion model. By conditioning image generation on semantic maps, we ensure that the synthetic outputs maintain topological accuracy, closely mirroring the vascular structures observed in real CTCA scans. Additionally, patched synthesis allows this method to be scalable, generating high resolution results regardless of hardware limitations. This approach solves some the issues related with the use of medical data in AI such as scarcity, limited resolution and patient privacy concerns.
 
 
 ## Example Results
-* **Cityscapes:**
+* **ImageCAS Dataset Low Resolution (64x64x64):**
 
 <p align='center'>  
-  <img src='assets/cityscapes.png'/>
+  <img src='assets/results_lr-03.png'/>
 </p>
 
-* **CelebA:**
+* **ImageCAS Dataset High Resolution (128x128x128):**
 
 <p align='center'>  
-  <img src='assets/celeba.png'/>
+  <img src='assets/results_hr-03.png'/>
 </p>
 
-* **ADE20K:**
-
-<p align='center'>  
-  <img src='assets/ade.png'/>
-</p>
-
-* **COCO-Stuff:**
-
-<p align='center'>  
-  <img src='assets/coco.png'/>
-</p>
 
 ## Prerequisites
 - Linux
@@ -56,69 +35,79 @@ Extensive experiments on three benchmark datasets demonstrate the effectiveness 
 - CPU or NVIDIA GPU + CUDA CuDNN
 
 ## Dataset Preparation
-The Cityscapes and ADE20K dataset can be downloaded and prepared following [SPADE](https://github.com/NVlabs/SPADE.git). The CelebAMask-HQ can be downloaded from [CelebAMask-HQ](https://github.com/switchablenorms/CelebAMask-HQ), you need to to integrate the separated annotations into an image file (the format like other datasets, e.g. Cityscapes and ADE20K). 
+The ImageCAS dataset can be downloaded [ImageCAS](https://github.com/XiaoweiXu/ImageCAS-A-Large-Scale-Dataset-and-Benchmark-for-Coronary-Artery-Segmentation-based-on-CT.git).
 
-### NEGCUT Training and Test
+The original data needs to be preprocessed:
+0. For our implementation complete heart labels were obtained using [Totalsegmentator](https://totalsegmentator.com/), and joined together with the coronary labels provided by ImageCAS
+1. Data should be resampled, reshaped and sliced to the desired size, using utils/resample_data.py 
+2. For the HR model, references need to be created using utils/resample_data.py w/ --ref True
 
-- Download the dataset.
+The folder structure should be as follows:
+#### Low Resolution Data
+    .
+    ImageCAS
+    ├── cta_processed
+        ├── training
+        ├── validation
+    ├── annotation_processed
+        ├── training
+        ├── validation 
+#### High Resolution Data
+    .
+    ImageCAS
+    ├── cta_processed_hr
+        ├── training
+        ├── validation
+    ├── annotation_processed_hr
+        ├── training
+        ├── validation
+    ├── cta_reference
+        ├── training
+        ├── validation
 
-- Train the SDM model:
+### Training and Test
+
+- Train the Low Resolution SDM model:
 ```bash
-export OPENAI_LOGDIR='OUTPUT/ADE20K-SDM-256CH'
-mpiexec -n 8 python image_train.py --data_dir ./data/ade20k --dataset_mode ade20k --lr 1e-4 --batch_size 4 --attention_resolutions 32,16,8 --diffusion_steps 1000 \
-                                   --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 256 --num_head_channels 64 --num_res_blocks 2  \
-                                   --resblock_updown True --use_fp16 True --use_scale_shift_norm True --use_checkpoint True --num_classes 151 \
-	                           --class_cond True --no_instance True
+ml cuda  # load default CUDA module
+
+python image_train.py --data_dir /home/data/imagecas/ --dataset_mode nifti --lr 1e-4 --batch_size 1 --attention_resolutions 16,8 --diffusion_steps 1000 --image_size 64 --learn_sigma True --noise_schedule cosine --num_channels 128 --num_head_channels 64 --num_res_blocks 2 --resblock_updown True --use_fp16 True --use_scale_shift_norm True --use_checkpoint True --num_classes 9 --class_cond True --no_instance True --lr_anneal_steps 20000
+
+ml -cuda  # unload all modules
 ```
 
-- Fine-tune the SDM model:
+- Train the High Resolution SDM model:
 ```bash
-export OPENAI_LOGDIR='OUTPUT/ADE20K-SDM-256CH-FINETUNE'
-mpiexec -n 8 python image_train.py --data_dir ./data/ade20k --dataset_mode ade20k --lr 2e-5 --batch_size 4 --attention_resolutions 32,16,8 --diffusion_steps 1000 \
-                                   --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 256 --num_head_channels 64 --num_res_blocks 2 \
-                                   --resblock_updown True --use_fp16 True --use_scale_shift_norm True --use_checkpoint True --num_classes 151 --class_cond True \
-                                   --no_instance True --drop_rate 0.2 --resume_checkpoint OUTPUT/ADE20K-SDM-256CH/model.pt
+ml cuda  # load default CUDA module
+
+python image_train.py --data_dir /home/data/imagecas/ --dataset_mode nifti_hr --lr 1e-4 --batch_size 1 --attention_resolutions 16,8 --diffusion_steps 1000 --image_size 128 --learn_sigma True --noise_schedule cosine --num_channels 128 --num_head_channels 64 --num_res_blocks 2 --resblock_updown True --use_fp16 True --use_scale_shift_norm True --use_checkpoint False --num_classes 9 --class_cond True --no_instance True --lr_anneal_steps 40000 --reference True --pos_emb True
+
+ml -cuda  # unload all modules
 ```
 
-- Test the SDM model:
+- Fine-tune the model:
 ```bash
-mpiexec -n 8 python image_sample.py --data_dir ./data/ade20k --dataset_mode ade20k --attention_resolutions 32,16,8 --diffusion_steps 1000 \
-                                    --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 256 --num_head_channels 64 \ 
-                                    --num_res_blocks 2 --resblock_updown True --use_fp16 True --use_scale_shift_norm True --num_classes 151 \
-                                    --class_cond True --no_instance True --batch_size 2 --num_samples 2000 --s 1.5 \
-                                    --model_path OUTPUT/ADE20K-SDM-256CH-FINETUNE/ema_0.9999_best.pt --results_path RESULTS/ADE20K-SDM-256CH
+ml cuda
+
+python image_train.py --data_dir /home/data/imagecas/ --dataset_mode nifti --lr 1e-4 --batch_size 1 --attention_resolutions 16,8 --diffusion_steps 1000 --image_size 64 --learn_sigma True --noise_schedule cosine --num_channels 128 --num_head_channels 64 --num_res_blocks 2 --resblock_updown True --use_fp16 True --use_scale_shift_norm True --use_checkpoint True --num_classes 9 --class_cond True --no_instance True --lr_anneal_steps 40000 --drop_rate 0.2 --resume_checkpoint ./logs/model_folder/model020000.pt
+
+ml -cuda
 ```
 
-Please refer to the 'scripts/ade20.sh' for more details.
-
-### Apply a pre-trained NEGCUT model and evaluate
-
-#### Pretrained Models (to be updated)
-|Dataset       |Download link     |
-|:-------------|:-----------------|
-|Cityscapes|[Visual results](https://drive.google.com/file/d/1TbLGCFJqRI4E8pFZJoHmj8MgDbwtjzhP/view?usp=sharing)|
-|ADE20K|[Checkpoint](https://drive.google.com/file/d/1O8Avsvfc8rP9LIt5tkJxowMTpi1nYiik/view?usp=sharing) \| [Visual results](https://drive.google.com/file/d/1NIXmrlBHqgyMHAoLBlmU8YELmL8Ij4kV/view?usp=sharing)|
-|CelebAMask-HQ |[Checkpoint](https://drive.google.com/file/d/1iwpruJ5HMHdAA1tuNR8dHkcjGtxzSFV_/view?usp=sharing) \| [Visual results](https://drive.google.com/file/d/1NDfU905iJINu4raoj4JdMOiHP8rTXr_M/view?usp=sharing)|
-|COCO-Stuff |[Checkpoint](https://drive.google.com/file/d/17XhegAk8V5W3YiFpHMBUn0LED-n7B44Y/view?usp=sharing) \| [Visual results](https://drive.google.com/file/d/1ZluvN9spJF8jlXlSQ98ekWTmHrzwYCqo/view?usp=sharing)|
-
-- To evaluate the model (e.g., ADE20K), first generate the test results:
+- Test the High Resolution SDM model:
 ```bash
-mpiexec -n 8 python image_sample.py --data_dir ./data/ade20k --dataset_mode ade20k --attention_resolutions 32,16,8 --diffusion_steps 1000 \
-                                    --image_size 256 --learn_sigma True --noise_schedule linear --num_channels 256 --num_head_channels 64 \ 
-                                    --num_res_blocks 2 --resblock_updown True --use_fp16 True --use_scale_shift_norm True --num_classes 151 \
-                                    --class_cond True --no_instance True --batch_size 2 --num_samples 2000 --s 1.5 \
-                                    --model_path OUTPUT/ADE20K-SDM-256CH-FINETUNE/ema_0.9999_best.pt --results_path RESULTS/ADE20K-SDM-256CH
+ml cuda
+
+python image_sample.py --data_dir /home/data/imagecas/ --batch_size 1 --dataset_mode nifti --attention_resolutions 16,8 --diffusion_steps 1000 --image_size 64 --learn_sigma True --noise_schedule cosine --num_channels 128 --num_head_channels 64 --num_res_blocks 2 --resblock_updown True --use_fp16 True --use_scale_shift_norm True  --num_classes 9 --class_cond True --no_instance True --num_samples 1 --s 1 --model_path ./logs/model_folder/model040000.pt --results_path ./results/results_name --history False --reference True --pos_emb True
+
+ml -cuda
 ```
 
-- To calucate FID metric, you should update "path1" and "path2" in "evaluations/test_with_FID.py" and run:
+- Test the High Resolution SDM model:
 ```bash
-python evaluations/test_with_FID.py
-```
+ml cuda
 
-- To calcuate LPIPS, you should evaluate the model for 10 times and run:
-```bash
-python evaluations/lpips.py GENERATED_IMAGES_DIR
-```
+python image_sample.py --data_dir /home/data/imagecas/ --batch_size 8 --dataset_mode nifti_hr --attention_resolutions 16,8 --diffusion_steps 1000 --image_size 128 --learn_sigma True --noise_schedule cosine --num_channels 128 --num_head_channels 64 --num_res_blocks 2 --resblock_updown True --use_fp16 True --use_scale_shift_norm True  --num_classes 9 --class_cond True --no_instance True --num_samples 8 --s 1 --model_path ./logs/model_folder/model040000.pt --results_path ./results/results_name --history False --reference True --pos_emb True
 
-### Acknowledge
-Our code is developed based on [guided-diffusion](https://github.com/openai/guided-diffusion). We also thank "test_with_FID.py" in [OASIS](https://github.com/boschresearch/OASIS) for FID computation, "lpips.py" in [stargan-v2](https://github.com/clovaai/stargan-v2) for LPIPS computation.
+ml -cuda
+```

@@ -41,18 +41,6 @@ def get_named_beta_schedule(schedule_name, num_diffusion_timesteps):
             num_diffusion_timesteps,
             lambda t: math.cos((t + 0.008) / 1.008 * math.pi / 2) ** 2,
         )
-    elif schedule_name == "sigmoid":
-        scale = 1500 / num_diffusion_timesteps
-
-        start=0.0001 * scale
-        end=0.025 * scale
-        sigmoid_range = end - start
-
-        t = np.linspace(-6, 6, num_diffusion_timesteps)
-
-        beta_schedule = start + sigmoid_range / (1 + np.exp(-t))
-        
-        return beta_schedule
     else:
         raise NotImplementedError(f"unknown beta schedule: {schedule_name}")
 
@@ -538,6 +526,7 @@ class GaussianDiffusion:
         Returns a generator over dicts, where each dict is the return value of
         p_sample().
         """
+        batch_size, channels, height, width, depth = shape
         if device is None:
             device = next(model.parameters()).device
         assert isinstance(shape, (tuple, list))
@@ -545,6 +534,7 @@ class GaussianDiffusion:
             img = noise
         else:
             img = th.randn(*shape, device=device)
+            
         if 'y' in model_kwargs:
             model_kwargs['y'] = model_kwargs['y'].to(device)
         indices = list(range(self.num_timesteps))[::-1]
