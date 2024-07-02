@@ -43,28 +43,27 @@ The original data needs to be preprocessed:
 2. For the HR model, references need to be created using utils/resample_data.py w/ --ref True
 
 The folder structure should be as follows:
-1. Low resolution data
-Imagecas
-|-cta_processed
-  |--training
-  |--validation
-|-annotation_processed
-  |--training
-  |--validation
-
-2. High resolution data
-Imagecas
-|-cta_processed_hr
-  |--training
-  |--validation
-|-annotation_processed_hr
-  |--training
-  |--validation
-|-cta_reference
-  |--training
-  |--validation
-
-
+-Low Resolution Data
+    .
+    ImageCAS
+    ├── cta_processed
+        ├── training
+        ├── validation
+    ├── annotation_processed
+        ├── training
+        ├── validation 
+- High Resolution Data
+    .
+    ImageCAS
+    ├── cta_processed_hr
+        ├── training
+        ├── validation
+    ├── annotation_processed_hr
+        ├── training
+        ├── validation
+    ├── cta_reference
+        ├── training
+        ├── validation
 
 ### Training and Test
 
