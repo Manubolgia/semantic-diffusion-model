@@ -58,7 +58,19 @@ def load_data(
     elif dataset_mode == 'nifti_hr' and image_size == 176:
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr176', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr176', 'training' if is_train else 'validation'))
-        instances = None        
+        instances = None     
+    elif dataset_mode == 'septal':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/septal_cta', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/septal_annotation', 'training' if is_train else 'validation'))
+        instances = None
+    elif dataset_mode == 'dilation':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/dilation_cta', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/dilation_annotation', 'training' if is_train else 'validation'))
+        instances = None
+    elif dataset_mode == 'hypertrophy':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/hypertrophy_cta', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/hypertrophy_annotation', 'training' if is_train else 'validation'))
+        instances = None
     else:
         raise NotImplementedError('{} not implemented'.format(dataset_mode))
 
@@ -136,16 +148,22 @@ class ImageDataset(Dataset):
         reference_path = path.replace('\\', '/').split('/')[-1].split('_')[0] + '.nii.gz'
         if self.resolution == 176:
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
+        elif self.dataset_mode == 'septal':
+            reference_path = os.path.join(os.path.dirname(path).replace('diseases/septal_cta', 'cta_reference'), reference_path)
+        elif self.dataset_mode == 'dilation':
+            reference_path = os.path.join(os.path.dirname(path).replace('diseases/dilation_cta', 'cta_reference'), reference_path)
+        elif self.dataset_mode == 'hypertrophy':
+            reference_path = os.path.join(os.path.dirname(path).replace('diseases/hypertrophy_cta', 'cta_reference'), reference_path)
         else:
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
 
         # Load the appropriate dataset mode
-        if self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-            arr_reference = read_nifti(reference_path)
-        else:
-            raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
+        #if self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+        arr_reference = read_nifti(reference_path)
+        #else:
+        #    raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
 
         arr_reference = arr_reference.astype(np.float32)
 
@@ -242,19 +260,19 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         
         path = self.local_images[idx]
-        if self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-            ct_image = read_nifti(path)
-        else:
-            raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
+        #if self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+        ct_image = read_nifti(path)
+        #else:
+        #    raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
 
         out_dict = {}
 
         if self.local_classes is not None:
             class_path = self.local_classes[idx]
-            if self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
-                ct_class = read_nifti(class_path)
-            else:
-                raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
+            #if self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
+            ct_class = read_nifti(class_path)
+            #else:
+            #    raise NotImplementedError('{} not implemented'.format(self.dataset_mode))
             
 
         if ct_image.shape[0] != self.resolution:
