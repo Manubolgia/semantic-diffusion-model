@@ -157,7 +157,8 @@ class ImageDataset(Dataset):
         else:
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_32'), reference_path)
+            #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference'), reference_path)
 
         # Load the appropriate dataset mode
         #if self.dataset_mode == 'nifti' or self.dataset_mode == 'nifti_hr':
