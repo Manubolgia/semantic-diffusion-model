@@ -100,16 +100,10 @@ def main():
         for j in range(sample.shape[0]):
             base_filename = '.'.join(cond['path'][j].split('/')[-1].split('.')[:-2])
             #base_filename = str(len(all_samples) * args.batch_size)
-            if args.dataset_mode == 'nrrd':
-                # Directories for saving NRRD files
-                file_image_path = os.path.join(image_path, base_filename + '.nrrd')
-                file_sample_path = os.path.join(sample_path, base_filename + '.nrrd')
-                file_label_path = os.path.join(label_path, base_filename + '.nrrd')
-            elif args.dataset_mode == 'nifti' or args.dataset_mode == 'nifti_hr':
-                # Directories for saving NIFTI files
-                file_image_path = os.path.join(image_path, base_filename + '.nii.gz')
-                file_sample_path = os.path.join(sample_path, base_filename + '.nii.gz')
-                file_label_path = os.path.join(label_path, base_filename + '.nii.gz')
+            # Directories for saving NIFTI files
+            file_image_path = os.path.join(image_path, base_filename + '.nii.gz')
+            file_sample_path = os.path.join(sample_path, base_filename + '.nii.gz')
+            file_label_path = os.path.join(label_path, base_filename + '.nii.gz')
 
             # Ensure directories exist
             os.makedirs(os.path.dirname(file_image_path), exist_ok=True)
@@ -122,7 +116,7 @@ def main():
             np_label = label[j].cpu().numpy().squeeze()
 
 
-            affine = get_affine(args.dataset_mode, affine_path[j])
+            affine = get_affine(affine_path[j])
             
 
             nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
@@ -142,7 +136,7 @@ def main():
                     history_filename = os.path.join(history_sample_path, f'{base_filename}_history_sample_{i}.nii.gz')
 
                     # Save the numpy array as a NIFTI file
-                    affine = get_affine(args.dataset_mode, affine_path[j])
+                    affine = get_affine(affine_path[j])
                     nib.save(nib.Nifti1Image(np_history_sample, affine), history_filename)
 
         logger.log(f"created {len(all_samples) * args.batch_size} samples")
@@ -180,18 +174,14 @@ def get_edges(t):
     edge[:, :, :-1, :] = edge[:, :, :-1, :] | (t[:, :, 1:, :] != t[:, :, :-1, :])
     return edge.float()
 
-def get_affine(dataset_mode, image_path):
+def get_affine(image_path):
     """
     Get affine matrix of dataset by nib loading the first image of the directory.
     If the dataset_mode is nrrd return eye(4) as affine matrix.
     """
-    if dataset_mode == 'nrrd':
-        affine = np.eye(4)
-    elif dataset_mode == 'nifti' or dataset_mode == 'nifti_hr':
-        img = nib.load(image_path)
-        affine = img.affine
-    else:
-        raise ValueError(f"Invalid dataset mode: {dataset_mode}")
+    img = nib.load(image_path)
+    affine = img.affine
+    
     return affine
 
 
