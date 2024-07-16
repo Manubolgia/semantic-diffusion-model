@@ -149,11 +149,11 @@ class ImageDataset(Dataset):
         if self.resolution == 176:
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr176', 'cta_reference'), reference_path)
         elif self.dataset_mode == 'septal':
-            reference_path = os.path.join(os.path.dirname(path).replace('septal_cta', 'septal_cta_reference_32'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('septal_cta', 'septal_cta_reference'), reference_path)
         elif self.dataset_mode == 'dilation':
-            reference_path = os.path.join(os.path.dirname(path).replace('dilation_cta', 'dilation_cta_reference_32'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('dilation_cta', 'dilation_cta_reference'), reference_path)
         elif self.dataset_mode == 'hypertrophy':
-            reference_path = os.path.join(os.path.dirname(path).replace('hypertrophy_cta', 'hypertrophy_cta_reference_32'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('hypertrophy_cta', 'hypertrophy_cta_reference'), reference_path)
         else:
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
