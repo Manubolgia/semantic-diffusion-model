@@ -226,7 +226,7 @@ class ImageDataset(Dataset):
         # Create the global positional encoding
 
         global_z_position= np.arange(z_start-pad_before, z_end-pad_before)/lr_depth
-        #global_z_position = 2 * (global_z_position - 0.5)
+        global_z_position = 2 * (global_z_position - 0.5)
 
         # Create a 3D positional embedding with the same dimensions as the reference
         global_z_embedding = np.tile(global_z_position.reshape(1, 1, arr_reference.shape[-1]), (lr_depth, lr_depth, 1))
@@ -248,7 +248,7 @@ class ImageDataset(Dataset):
         z_end = int(z_start + depth)
 
         global_z_position = (np.arange(z_start, z_end))/self.resolution
-        #global_z_position = 2 * (global_z_position - 0.5)
+        global_z_position = 2 * (global_z_position - 0.5)
         global_z_embedding = np.tile(global_z_position.reshape(1, 1, depth), (self.resolution, self.resolution, 1))
 
         global_z_embedding = global_z_embedding[np.newaxis, ...]
