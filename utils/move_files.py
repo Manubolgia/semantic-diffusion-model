@@ -35,7 +35,7 @@ def move_files(file_list, src_dir, dest_dir, suffix):
     for file in file_list:
         src_file = os.path.join(src_dir, file)
         dest_file = os.path.join(dest_dir, file.replace('.img.nii.gz', suffix))
-        shutil.move(src_file, dest_file)
+        shutil.copy(src_file, dest_file)
 
 # Move the selected files to the finetuning directories
 move_files(random_files, cta_processed_dir, cta_processed_finetune_dir, '.img.nii.gz')
