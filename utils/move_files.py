@@ -33,7 +33,7 @@ random_files = random.sample(cta_files, 100)
 # Function to move files
 def move_files(file_list, src_dir, dest_dir, suffix):
     for file in file_list:
-        src_file = os.path.join(src_dir, file)
+        src_file = os.path.join(src_dir, file.replace('.img.nii.gz', suffix))
         dest_file = os.path.join(dest_dir, file.replace('.img.nii.gz', suffix))
         shutil.copy(src_file, dest_file)
 
