@@ -37,12 +37,22 @@ def move_files(file_list, src_dir, dest_dir, suffix):
         dest_file = os.path.join(dest_dir, file.replace('.img.nii.gz', suffix))
         shutil.copy(src_file, dest_file)
 
+# Function to copy high-resolution files
+def copy_hr_files(file_list, src_dir, dest_dir, suffix):
+    for file in file_list:
+        base_name = file.replace('.img.nii.gz', '')
+        for i in range(8):  # Assuming 0000 to 0007
+            src_file = os.path.join(src_dir, f"{base_name}{suffix}_{i:04d}.nii.gz")
+            dest_file = os.path.join(dest_dir, f"{base_name}{suffix}_{i:04d}.nii.gz")
+            if os.path.exists(src_file):
+                shutil.copy(src_file, dest_file)
+
 # Move the selected files to the finetuning directories
 move_files(random_files, cta_processed_dir, cta_processed_finetune_dir, '.img.nii.gz')
 move_files(random_files, annotation_processed_dir, annotation_processed_finetune_dir, '.label.nii.gz')
 
-# Move the corresponding high-resolution files
-move_files(random_files, cta_processed_hr_dir, cta_processed_hr_finetune_dir, '.img.nii.gz')
-move_files(random_files, annotation_processed_hr_dir, annotation_processed_hr_finetune_dir, '.label.nii.gz')
+# Copy the corresponding high-resolution files
+copy_hr_files(random_files, cta_processed_hr_dir, cta_processed_hr_finetune_dir, '.img.nii.gz')
+copy_hr_files(random_files, annotation_processed_hr_dir, annotation_processed_hr_finetune_dir, '.label.nii.gz')
 
 print("Files have been moved successfully.")
