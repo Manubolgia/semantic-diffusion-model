@@ -52,7 +52,7 @@ move_files(random_files, cta_processed_dir, cta_processed_finetune_dir, '.img.ni
 move_files(random_files, annotation_processed_dir, annotation_processed_finetune_dir, '.label.nii.gz')
 
 # Copy the corresponding high-resolution files
-copy_hr_files(random_files, cta_processed_hr_dir, cta_processed_hr_finetune_dir, '.img.nii.gz')
-copy_hr_files(random_files, annotation_processed_hr_dir, annotation_processed_hr_finetune_dir, '.label.nii.gz')
+copy_hr_files(random_files, cta_processed_hr_dir, cta_processed_hr_finetune_dir, '.img')
+copy_hr_files(random_files, annotation_processed_hr_dir, annotation_processed_hr_finetune_dir, '.label')
 
 print("Files have been moved successfully.")
