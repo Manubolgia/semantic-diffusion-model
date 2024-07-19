@@ -159,7 +159,7 @@ class ImageDataset(Dataset):
         elif self.dataset_mode == 'hypertrophy':
             reference_path = os.path.join(os.path.dirname(path).replace('hypertrophy_cta', 'hypertrophy_cta_reference'), reference_path)
         elif self.dataset_mode == 'nifti_finetune':
-            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed__hr_finetune', 'cta_reference_syn_finetune'), reference_path)
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr_finetune', 'cta_reference_syn_finetune'), reference_path)
         else:
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
