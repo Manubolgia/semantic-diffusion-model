@@ -3,7 +3,7 @@ import argparse
 import torchio as tio
 import nibabel as nib
 import numpy as np
-from skimage.exposure import match_histograms
+#from skimage.exposure import match_histograms
 
 def normalize_image(image_data, min_val, max_val):
     # Clip the values to be within the min and max range
@@ -53,7 +53,7 @@ def process_image(image_path, output_path, target_size, new_spacing, lr=False, r
         if reference_path is not None:
             gt_img = nib.load(reference_path)
             gt_img_data = gt_img.get_fdata()
-            img_data = match_histograms(img_data, gt_img_data)
+            #img_data = match_histograms(img_data, gt_img_data)
 
         new_img = nib.Nifti1Image(img_data, affine=example_img.affine)
         nib.save(new_img, output_path)
