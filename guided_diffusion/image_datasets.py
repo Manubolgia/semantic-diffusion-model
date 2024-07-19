@@ -71,6 +71,10 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/hypertrophy_cta', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/hypertrophy_annotation', 'training' if is_train else 'validation'))
         instances = None
+    elif dataset_mode == 'nifti_finetune':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_finetune', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_finetune', 'training' if is_train else 'validation'))
+        instances = None
     else:
         raise NotImplementedError('{} not implemented'.format(dataset_mode))
 
@@ -154,6 +158,8 @@ class ImageDataset(Dataset):
             reference_path = os.path.join(os.path.dirname(path).replace('dilation_cta', 'dilation_cta_reference'), reference_path)
         elif self.dataset_mode == 'hypertrophy':
             reference_path = os.path.join(os.path.dirname(path).replace('hypertrophy_cta', 'hypertrophy_cta_reference'), reference_path)
+        elif self.dataset_mode == 'nifti_finetune':
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_finetune', 'cta_reference_syn_finetune'), reference_path)
         else:
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
