@@ -71,6 +71,10 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/hypertrophy_cta', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/hypertrophy_annotation', 'training' if is_train else 'validation'))
         instances = None
+    elif dataset_mode == 'coronary':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/coronary_cta', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/coronary_annotation', 'training' if is_train else 'validation'))
+        instances = None
     elif dataset_mode == 'nifti_finetune' or dataset_mode == 'nifti_finetune32':
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr_finetune', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr_finetune', 'training' if is_train else 'validation'))
@@ -158,6 +162,8 @@ class ImageDataset(Dataset):
             reference_path = os.path.join(os.path.dirname(path).replace('dilation_cta', 'dilation_cta_reference'), reference_path)
         elif self.dataset_mode == 'hypertrophy':
             reference_path = os.path.join(os.path.dirname(path).replace('hypertrophy_cta', 'hypertrophy_cta_reference'), reference_path)
+        elif self.dataset_mode == 'coronary':
+            reference_path = os.path.join(os.path.dirname(path).replace('coronary_cta', 'cta_reference'), reference_path)
         elif self.dataset_mode == 'nifti_finetune':
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr_finetune', 'cta_reference_syn_finetune'), reference_path)
         elif self.dataset_mode == 'nifti_finetune32':
