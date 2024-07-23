@@ -65,6 +65,10 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/hypertrophy_cta_lr', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/hypertrophy_annotation_lr', 'training' if is_train else 'validation'))
         instances = None
+    elif dataset_mode == 'coronary':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/coronary_cta_lr', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/coronary_annotation_lr', 'training' if is_train else 'validation'))
+        instances = None
     else:
         raise NotImplementedError('{} not implemented'.format(dataset_mode))
 
