@@ -39,6 +39,22 @@ def mask_non_padding_slices(data, padding_value=-1024):
     mask = np.any(data != padding_value, axis=(0, 1))
     return mask
 
+def scale_and_shift(syn_data, real_data, lower_percentile=1, upper_percentile=99):
+    real_lower = np.percentile(real_data[:, :, mask], lower_percentile)
+    real_upper = np.percentile(real_data[:, :, mask], upper_percentile)
+    syn_lower = np.percentile(syn_data[:, :, mask], lower_percentile)
+    syn_upper = np.percentile(syn_data[:, :, mask], upper_percentile)
+    
+    # Scale synthetic data to the range of real data
+    scaled_syn_data = np.copy(syn_data)
+    scaled_syn_data[:, :, mask] = ((syn_data[:, :, mask] - syn_lower) / (syn_upper - syn_lower)) * (real_upper - real_lower) + real_lower
+    
+    # Ensure no values are below -1024 after scaling
+    scaled_syn_data[scaled_syn_data < -1024] = -1024
+    
+    return scaled_syn_data
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Image Processing Script")
     parser.add_argument("--real_data_folder", required=True, help="Path to the real data folder")
@@ -68,13 +84,13 @@ if __name__ == '__main__':
             # Create mask for non-padding slices in real data
             mask = mask_non_padding_slices(real_data)
 
-            # Create mask for the rest of the slices
-            mask_pad = ~mask
-
-            # Match histograms only on non-padding slices
+            # Scale and shift synthetic data to match real data
             matched_data = np.copy(syn_data)
-            matched_data[:, :, mask] = match_histograms(syn_data[:, :, mask], real_data[:, :, mask])
-            matched_data[:, :, mask_pad] = match_histograms(syn_data[:, :, mask_pad], real_data[:, :, mask_pad])
+            matched_data[:, :, mask] = scale_and_shift(syn_data, real_data)[:, :, mask]
+
+            # Match histograms for padding regions
+            mask_pad = ~mask
+            matched_data[:, :, mask_pad] = real_data[:, :, mask_pad]
 
             # Update metadata
             updated_syn_img = update_metadata(syn_img, real_img)
