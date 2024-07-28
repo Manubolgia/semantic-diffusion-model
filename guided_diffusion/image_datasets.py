@@ -49,9 +49,9 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed', 'training' if is_train else 'validation'))
         instances = None  
-    elif dataset_mode == 'nifti_val':
-        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_finetune', 'validation'))
-        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_finetune', 'validation'))
+    elif dataset_mode == 'nifti_redo':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_redo', 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_redo', 'validation'))
         instances = None  
     elif dataset_mode == 'septal':
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/septal_cta_lr', 'training' if is_train else 'validation'))
