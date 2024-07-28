@@ -2,6 +2,7 @@ import nibabel as nib
 from skimage.exposure import match_histograms
 import argparse
 import os
+import numpy as np
 
 def list_nifti_files(data_dir):
     """
@@ -31,6 +32,13 @@ def update_metadata(src_img, target_img):
     src_img.update_header()
     return src_img
 
+def mask_non_padding_slices(data, padding_value=-1024):
+    """
+    Create a mask that identifies non-padding slices.
+    """
+    mask = np.any(data != padding_value, axis=(0, 1))
+    return mask
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Image Processing Script")
     parser.add_argument("--real_data_folder", required=True, help="Path to the real data folder")
@@ -57,8 +65,12 @@ if __name__ == '__main__':
             syn_data[syn_data > 0.999] = args.level
             syn_data = (syn_data + 1) / 2.0
 
-            # Match histograms
-            matched_data = match_histograms(syn_data, real_data)
+            # Create mask for non-padding slices in real data
+            mask = mask_non_padding_slices(real_data)
+
+            # Match histograms only on non-padding slices
+            matched_data = np.copy(syn_data)
+            matched_data[:, :, mask] = match_histograms(syn_data[:, :, mask], real_data[:, :, mask])
 
             # Update metadata
             updated_syn_img = update_metadata(syn_img, real_img)
