@@ -76,12 +76,12 @@ def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new
                 os.makedirs(os.path.dirname(save_path), exist_ok=True)
                 nib.save(nib.Nifti1Image(resized_subject[key].data.numpy().squeeze(), affine=resized_subject[key].affine), save_path)
         else:
-            processed_subject = tio.Resize((crop_dims, crop_dims, crop_dims), image_interpolation='linear')(processed_subject)
+            #processed_subject = tio.Resize((crop_dims, crop_dims, crop_dims), image_interpolation='linear')(processed_subject)
             # Process for HR scenario with slices of depth D
             for key in ['image', 'label']:
                 original_path = getattr(subject, key).path
                 original_file_name = os.path.splitext(os.path.basename(original_path))[0].replace('.img.nii', '.img').replace('.label.nii', '.label')
-                save_path = str(original_path).replace('cta', 'cta_hr').replace('annotation', 'annotation_hr')
+                save_path = str(original_path).replace('cta', 'cta_processed_hr176').replace('annotation', 'annotation_processed_hr176')
                 base_dir = os.path.dirname(save_path)
             
                 # Calculate the number of sub-volumes
@@ -116,8 +116,8 @@ if __name__ == "__main__":
     categories = ['cta', 'annotation']
     sets = ['training', 'validation']
 
-    target_size_hw = 160
-    target_size_d = 160
+    target_size_hw = 176#160
+    target_size_d = 144#160
 
     for set_type in sets:
         image_paths = _list_nifti_files_recursively(os.path.join(args.data_folder, 'cta', set_type))
