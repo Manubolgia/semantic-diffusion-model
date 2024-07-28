@@ -69,12 +69,12 @@ if __name__ == '__main__':
             mask = mask_non_padding_slices(real_data)
 
             # Create mask for the rest of the slices
-            mask_pad = np.any(real_data != -1024, axis=(0, 1))
+            mask_pad = ~mask
 
             # Match histograms only on non-padding slices
             matched_data = np.copy(syn_data)
             matched_data[:, :, mask] = match_histograms(syn_data[:, :, mask], real_data[:, :, mask])
-            matched_data[:, :, mask_pad] = syn_data[:, :, mask_pad]
+            matched_data[:, :, mask_pad] = match_histograms(syn_data[:, :, mask_pad], real_data[:, :, mask_pad])
 
             # Update metadata
             updated_syn_img = update_metadata(syn_img, real_img)
