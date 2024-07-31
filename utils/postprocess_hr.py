@@ -132,4 +132,4 @@ if __name__ == '__main__':
         output_path = os.path.join(args.output_path, f'{template}.nii.gz')
         directory = os.path.join(args.directory, 'samples')
 
-        stitch_and_normalize_volumes(args.directory, file_pattern, args.output_path, args.level, args.gt_directory)
+        stitch_and_normalize_volumes(directory, file_pattern, output_path, args.level, args.gt_directory)
