@@ -119,26 +119,6 @@ def stitch_and_normalize_volumes(directory, file_pattern, output_path, level, gt
     stitched_image = nib.Nifti1Image(stitched_data, affine=example_img.affine)
     nib.save(stitched_image, output_path)
 
-directory = 'E:/BMC/Thesis/Results/FS_HR_slice-refv2-64_embv5_validation/'
-gt_directory = 'E:/BMC/Thesis/real/'
-
-templates = ['751']  # List of templates to process
-if not templates:
-    for template in range(751, 801):
-        file_pattern = str(template)
-        output_path = os.path.join(directory, f'{template}_full.nii.gz')
-        directory = os.path.join(directory, 'samples')
-
-        stitch_and_normalize_volumes(directory, file_pattern, output_path, gt_directory)
-else:
-    for template in templates:
-        file_pattern = template  # Adjust this to match your actual filenames
-        output_path = os.path.join(directory, f'{template}_full.nii.gz')
-        directory = os.path.join(directory, 'samples')
-
-        stitch_and_normalize_volumes(directory, file_pattern, output_path, gt_directory)
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Stitch and Normalize Volumes")
     parser.add_argument("--directory", required=True, help="Directory containing the sub-volumes")
