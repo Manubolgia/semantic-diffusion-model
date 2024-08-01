@@ -70,6 +70,13 @@ def main():
 
     logger.log("sampling...")
     all_samples = []
+
+    samples_per_image = args.samples_per_image
+    if args.image_size == 128:
+        volumes_per_image = 8
+    elif args.image_size == 176:
+        volumes_per_image = 9
+    
     for i, (batch, cond) in enumerate(data):
         affine_path = cond['path']
 
@@ -83,7 +90,7 @@ def main():
         sample_fn = (
             diffusion.p_sample_loop if not args.use_ddim else diffusion.ddim_sample_loop
         )
-        for sample_i in range(args.samples_per_image):
+        for sample_i in range(samples_per_image):
 
             sample, history_list = sample_fn(
                 model,
@@ -102,15 +109,19 @@ def main():
             all_samples.extend([sample.cpu().numpy() for sample in gathered_samples])
 
             for j in range(sample.shape[0]):
-                base_filename = '.'.join(cond['path'][j].split('/')[-1].split('.')[:-2])
+
+
+                volume_filename = '.'.join(cond['path'][j].split('/')[-1].split('.')[:-2])
+                image_number, _ = volume_filename.split('.')
+
                 #base_filename = str(len(all_samples) * args.batch_size)
-                sample_folder = f'{base_filename}_samples_{sample_i + 1}'
-                sample_image_path = os.path.join(sample_path, sample_folder)
+                sample_folder = f'{image_number}_sample_{sample_i + 1}'
+                sample_image_path = os.path.join(sample_image_path, sample_folder)
                 os.makedirs(sample_image_path, exist_ok=True)
 
-                file_image_path = os.path.join(image_path, base_filename + '.nii.gz')
-                file_sample_path = os.path.join(sample_image_path, base_filename + '.nii.gz')
-                file_label_path = os.path.join(label_path, base_filename + '.nii.gz')
+                file_image_path = os.path.join(image_path, volume_filename + '.nii.gz')
+                file_sample_path = os.path.join(sample_image_path, volume_filename + '.nii.gz')
+                file_label_path = os.path.join(label_path, volume_filename + '.nii.gz')
 
                 # Ensure directories exist
                 os.makedirs(os.path.dirname(file_image_path), exist_ok=True)
@@ -133,7 +144,7 @@ def main():
 
         logger.log(f"created {len(all_samples) * args.batch_size} samples")
 
-        if len(all_samples) * args.batch_size >= args.num_samples * args.samples_per_image:
+        if len(all_samples) * args.batch_size >= args.num_samples * volumes_per_image * samples_per_image:
             break
 
     logger.log("sampling complete")
