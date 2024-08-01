@@ -112,7 +112,6 @@ def main():
 
 
                 volume_filename = '.'.join(cond['path'][j].split('/')[-1].split('.')[:-2])
-                print(volume_filename)
                 image_number, _ = volume_filename.split('.')
 
                 #base_filename = str(len(all_samples) * args.batch_size)
