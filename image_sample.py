@@ -116,7 +116,7 @@ def main():
 
                 #base_filename = str(len(all_samples) * args.batch_size)
                 sample_folder = f'{image_number}_sample_{sample_i + 1}'
-                sample_image_path = os.path.join(sample_image_path, sample_folder)
+                sample_image_path = os.path.join(sample_path, sample_folder)
                 os.makedirs(sample_image_path, exist_ok=True)
 
                 file_image_path = os.path.join(image_path, volume_filename + '.nii.gz')
