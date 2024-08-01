@@ -102,12 +102,18 @@ def main():
             all_samples.extend([sample.cpu().numpy() for sample in gathered_samples])
 
             for j in range(sample.shape[0]):
-                base_filename = '.'.join(cond['path'][j].split('/')[-1].split('.')[:-2])
+                volume_filename = '.'.join(cond['path'][j].split('/')[-1].split('.')[:-2])
+                image_number, _ = volume_filename.split('.')
+
                 #base_filename = str(len(all_samples) * args.batch_size)
                 # Directories for saving NIFTI files
-                file_image_path = os.path.join(image_path, base_filename + '.nii.gz')
-                file_sample_path = os.path.join(sample_path, base_filename + '.nii.gz')
-                file_label_path = os.path.join(label_path, base_filename + '.nii.gz')
+                sample_folder = f'{image_number}_sample_{sample_i + 1}'
+                sample_image_path = os.path.join(sample_path, sample_folder)
+                os.makedirs(sample_image_path, exist_ok=True)
+
+                file_image_path = os.path.join(image_path, volume_filename + '.nii.gz')
+                file_sample_path = os.path.join(sample_image_path, volume_filename + '.nii.gz')
+                file_label_path = os.path.join(label_path, volume_filename + '.nii.gz')
 
                 # Ensure directories exist
                 os.makedirs(os.path.dirname(file_image_path), exist_ok=True)
