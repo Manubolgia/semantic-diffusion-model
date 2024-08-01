@@ -68,6 +68,8 @@ def main():
 
     logger.log("sampling...")
     all_samples = []
+    samples_per_image = args.samples_per_image
+
     for i, (batch, cond) in enumerate(data):
         affine_path = cond['path']
 
@@ -81,67 +83,69 @@ def main():
         sample_fn = (
             diffusion.p_sample_loop if not args.use_ddim else diffusion.ddim_sample_loop
         )
-        sample, history_list = sample_fn(
-            model,
-            (args.batch_size, 1, d, h, w), #this is used to create the initial noise, so 1 channel and not nclasses channels
-            args.history, #saving intermediate samples
-            clip_denoised=args.clip_denoised,
-            model_kwargs=model_kwargs,
-            progress=False #loading animation
-        )
-        sample = (sample + 1) / 2.0
-        for sample_i in history_list:
-            sample_i = (sample_i + 1) / 2.0
+        for sample_i in range(samples_per_image):
+            
+            sample, history_list = sample_fn(
+                model,
+                (args.batch_size, 1, d, h, w), #this is used to create the initial noise, so 1 channel and not nclasses channels
+                args.history, #saving intermediate samples
+                clip_denoised=args.clip_denoised,
+                model_kwargs=model_kwargs,
+                progress=False #loading animation
+            )
+            sample = (sample + 1) / 2.0
+            for sample_i in history_list:
+                sample_i = (sample_i + 1) / 2.0
 
-        gathered_samples = [th.zeros_like(sample)]
+            gathered_samples = [th.zeros_like(sample)]
         
-        all_samples.extend([sample.cpu().numpy() for sample in gathered_samples])
+            all_samples.extend([sample.cpu().numpy() for sample in gathered_samples])
 
-        for j in range(sample.shape[0]):
-            base_filename = '.'.join(cond['path'][j].split('/')[-1].split('.')[:-2])
-            #base_filename = str(len(all_samples) * args.batch_size)
-            # Directories for saving NIFTI files
-            file_image_path = os.path.join(image_path, base_filename + '.nii.gz')
-            file_sample_path = os.path.join(sample_path, base_filename + '.nii.gz')
-            file_label_path = os.path.join(label_path, base_filename + '.nii.gz')
+            for j in range(sample.shape[0]):
+                base_filename = '.'.join(cond['path'][j].split('/')[-1].split('.')[:-2])
+                #base_filename = str(len(all_samples) * args.batch_size)
+                # Directories for saving NIFTI files
+                file_image_path = os.path.join(image_path, base_filename + '.nii.gz')
+                file_sample_path = os.path.join(sample_path, base_filename + '.nii.gz')
+                file_label_path = os.path.join(label_path, base_filename + '.nii.gz')
 
-            # Ensure directories exist
-            os.makedirs(os.path.dirname(file_image_path), exist_ok=True)
-            os.makedirs(os.path.dirname(file_sample_path), exist_ok=True)
-            os.makedirs(os.path.dirname(file_label_path), exist_ok=True)
+                # Ensure directories exist
+                os.makedirs(os.path.dirname(file_image_path), exist_ok=True)
+                os.makedirs(os.path.dirname(file_sample_path), exist_ok=True)
+                os.makedirs(os.path.dirname(file_label_path), exist_ok=True)
 
-            # Convert tensors to numpy arrays and squeeze if necessary
-            np_image = image[j].cpu().numpy().squeeze()
-            np_sample = sample[j].cpu().numpy().squeeze()
-            np_label = label[j].cpu().numpy().squeeze()
+                # Convert tensors to numpy arrays and squeeze if necessary
+                np_image = image[j].cpu().numpy().squeeze()
+                np_sample = sample[j].cpu().numpy().squeeze()
+                np_label = label[j].cpu().numpy().squeeze()
 
 
-            affine = get_affine(affine_path[j])
+                affine = get_affine(affine_path[j])
             
 
-            nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
-            nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
-            nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
+                nib.save(nib.Nifti1Image(np_image, affine), file_image_path)
+                nib.save(nib.Nifti1Image(np_sample, affine), file_sample_path)
+                nib.save(nib.Nifti1Image(np_label, affine), file_label_path)
 
         
-        if args.history:
-            for j in range(args.batch_size):
-                base_filename = cond['path'][j].split('/')[-1].split('.')[0]
-                for i, history_sample in enumerate(history_list):
-                    # Convert tensor to numpy array and squeeze if necessary
-                    np_history_sample = history_sample.cpu().numpy().squeeze()
+        #if args.history:
+        #    for j in range(args.batch_size):
+        #        base_filename = cond['path'][j].split('/')[-1].split('.')[0]
+        #        for i, history_sample in enumerate(history_list):
+        #            # Convert tensor to numpy array and squeeze if necessary
+        #            np_history_sample = history_sample.cpu().numpy().squeeze()
 
 
-                    # Filename for each sample in history
-                    history_filename = os.path.join(history_sample_path, f'{base_filename}_history_sample_{i}.nii.gz')
+        #            # Filename for each sample in history
+        #            history_filename = os.path.join(history_sample_path, f'{base_filename}_history_sample_{i}.nii.gz')
 
-                    # Save the numpy array as a NIFTI file
-                    affine = get_affine(affine_path[j])
-                    nib.save(nib.Nifti1Image(np_history_sample, affine), history_filename)
+        #            # Save the numpy array as a NIFTI file
+        #            affine = get_affine(affine_path[j])
+        #            nib.save(nib.Nifti1Image(np_history_sample, affine), history_filename)
 
         logger.log(f"created {len(all_samples) * args.batch_size} samples")
 
-        if len(all_samples) * args.batch_size >= args.num_samples:
+        if len(all_samples) * args.batch_size >= args.num_samples * samples_per_image:
             break
 
     logger.log("sampling complete")
@@ -192,6 +196,7 @@ def create_argparser():
         clip_denoised=True,
         num_samples=10000,
         batch_size=1,
+        samples_per_image=1,
         use_ddim=False,
         model_path="",
         results_path="",
