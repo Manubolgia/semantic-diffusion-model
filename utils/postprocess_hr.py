@@ -141,4 +141,5 @@ if __name__ == '__main__':
         sample_directories = glob.glob(os.path.join(args.directory, f'samples/{args.sample_id}_sample*'))
         for sample_directory in sample_directories:
             output_path = os.path.join(args.output_path, f"{args.sample_id}_{sample_directory.split('_sample')[-1]}.img.nii.gz")
+            print([sample_directory, file_pattern, output_path])
             stitch_and_normalize_volumes(sample_directory, file_pattern, output_path, args.level, args.gt_directory)
