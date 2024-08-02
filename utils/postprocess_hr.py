@@ -126,10 +126,10 @@ if __name__ == '__main__':
     parser.add_argument("--gt_directory", help="Directory containing the ground truth sub-volumes for histogram matching")
     parser.add_argument("--output_path", required=True, help="Path to save the stitched volume")
     parser.add_argument("--level", type=float, default=0.9, help="Level for thresholding synthetic data")
-    parser.add_argument("--sample_id", type=int, default=0, help="Sample ID for stitching")
+    parser.add_argument("--sample_id", type=str, default=0, help="Sample ID for stitching")
     args = parser.parse_args()
 
-    if args.sample_id == 0:
+    if args.sample_id == '0':
         for template in range(751, 801):
             file_pattern = str(template)
             sample_directories = glob.glob(os.path.join(args.directory, f'samples/{template}_sample*'))
