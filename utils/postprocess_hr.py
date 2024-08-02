@@ -3,6 +3,7 @@ import nibabel as nib
 import numpy as np
 from skimage.exposure import match_histograms
 import argparse
+import glob
 
 def convert_data_precision(data, target_dtype):
     """
@@ -125,11 +126,19 @@ if __name__ == '__main__':
     parser.add_argument("--gt_directory", help="Directory containing the ground truth sub-volumes for histogram matching")
     parser.add_argument("--output_path", required=True, help="Path to save the stitched volume")
     parser.add_argument("--level", type=float, default=0.9, help="Level for thresholding synthetic data")
+    parser.add_argument("--sample_id", type=int, default=0, help="Sample ID for stitching")
     args = parser.parse_args()
 
-    for template in range(751, 801):
-        file_pattern = str(template)
-        output_path = os.path.join(args.output_path, f'{template}.nii.gz')
-        directory = os.path.join(args.directory, 'samples')
-
-        stitch_and_normalize_volumes(directory, file_pattern, output_path, args.level, args.gt_directory)
+    if args.sample_id == 0:
+        for template in range(751, 801):
+            file_pattern = str(template)
+            sample_directories = glob.glob(os.path.join(args.directory, f'samples/{template}_sample*'))
+            for sample_directory in sample_directories:
+                output_path = os.path.join(args.output_path, f'{template}_{sample_directory.split('_sample')[-1]}.img.nii.gz')
+                stitch_and_normalize_volumes(sample_directory, file_pattern, output_path, args.level, args.gt_directory)
+    else:
+        file_pattern = str(args.sample_id)
+        sample_directories = glob.glob(os.path.join(args.directory, f'samples/{args.sample_id}_sample*'))
+        for sample_directory in sample_directories:
+            output_path = os.path.join(args.output_path, f'{args.sample_id}_{sample_directory.split('_sample')[-1]}.img.nii.gz')
+            stitch_and_normalize_volumes(sample_directory, file_pattern, output_path, args.level, args.gt_directory)
