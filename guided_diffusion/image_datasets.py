@@ -75,9 +75,9 @@ def load_data(
         all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/coronary_cta', 'training' if is_train else 'validation'))
         classes = _list_nifti_files_recursively(os.path.join(data_dir, 'diseases/coronary_annotation', 'training' if is_train else 'validation'))
         instances = None
-    elif dataset_mode == 'nifti_finetune' or dataset_mode == 'nifti_finetune32':
-        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr_finetune', 'training' if is_train else 'validation'))
-        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr_finetune', 'training' if is_train else 'validation'))
+    elif dataset_mode == 'multi':
+        all_files = _list_nifti_files_recursively(os.path.join(data_dir, 'cta_processed_hr_multi', 'training' if is_train else 'validation'))
+        classes = _list_nifti_files_recursively(os.path.join(data_dir, 'annotation_processed_hr_multi', 'training' if is_train else 'validation'))
         instances = None
     else:
         raise NotImplementedError('{} not implemented'.format(dataset_mode))
@@ -168,6 +168,8 @@ class ImageDataset(Dataset):
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr_finetune', 'cta_reference_syn_finetune'), reference_path)
         elif self.dataset_mode == 'nifti_finetune32':
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr_finetune', 'cta_reference_syn32_finetune'), reference_path)
+        elif self.dataset_mode == 'multi':
+            reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr_multi', 'cta_reference_multi'), reference_path)
         else:
             #reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn32'), reference_path)
             reference_path = os.path.join(os.path.dirname(path).replace('cta_processed_hr', 'cta_reference_syn'), reference_path)
