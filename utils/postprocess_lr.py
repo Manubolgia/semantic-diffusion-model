@@ -53,7 +53,7 @@ def postprocessing(sample_directory, file_pattern, output_path, args):
         return
     
     syn_img, syn_data = read_nifti(os.path.join(sample_directory, syn_file))
-    real_img, real_data = read_nifti(os.path.join(args.gt_directory), syn_file)
+    real_img, real_data = read_nifti(os.path.join(args.gt_directory, syn_file))
 
     # Preprocessing synthetic data
     syn_data = (syn_data * 2) - 1
