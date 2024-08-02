@@ -129,6 +129,7 @@ if __name__ == '__main__':
     parser.add_argument("--sample_id", type=str, default=0, help="Sample ID for stitching")
     args = parser.parse_args()
 
+    print('Starting stitching and normalization...')
     if args.sample_id == '0':
         for template in range(751, 801):
             file_pattern = str(template)
@@ -137,6 +138,7 @@ if __name__ == '__main__':
                 output_path = os.path.join(args.output_path, f"{template}_{sample_directory.split('_sample')[-1]}.img.nii.gz")
                 stitch_and_normalize_volumes(sample_directory, file_pattern, output_path, args.level, args.gt_directory)
     else:
+        print(args.sample_id)
         file_pattern = str(args.sample_id)
         sample_directories = glob.glob(os.path.join(args.directory, f'samples/{args.sample_id}_sample*'))
         for sample_directory in sample_directories:
