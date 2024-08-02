@@ -135,13 +135,13 @@ if __name__ == '__main__':
             file_pattern = str(template)
             sample_directories = glob.glob(os.path.join(args.directory, f'samples/{template}_sample*'))
             for sample_directory in sample_directories:
-                output_path = os.path.join(args.output_path, f"{template}_{sample_directory.split('_sample')[-1]}.img.nii.gz")
+                output_path = os.path.join(args.output_path, f"{template}{sample_directory.split('_sample')[-1]}.img.nii.gz")
                 stitch_and_normalize_volumes(sample_directory, file_pattern, output_path, args.level, args.gt_directory)
     else:
         print(args.sample_id)
         file_pattern = str(args.sample_id)
         sample_directories = glob.glob(os.path.join(args.directory, f'samples/{args.sample_id}_sample*'))
         for sample_directory in sample_directories:
-            output_path = os.path.join(args.output_path, f"{args.sample_id}_{sample_directory.split('_sample')[-1]}.img.nii.gz")
+            output_path = os.path.join(args.output_path, f"{args.sample_id}{sample_directory.split('_sample')[-1]}.img.nii.gz")
             print([sample_directory, file_pattern, output_path])
             stitch_and_normalize_volumes(sample_directory, file_pattern, output_path, args.level, args.gt_directory)
