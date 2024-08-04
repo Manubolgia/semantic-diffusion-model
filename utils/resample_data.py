@@ -76,7 +76,7 @@ def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new
                 os.makedirs(os.path.dirname(save_path), exist_ok=True)
                 nib.save(nib.Nifti1Image(resized_subject[key].data.numpy().squeeze(), affine=resized_subject[key].affine), save_path)
         else:
-            #processed_subject = tio.Resize((crop_dims, crop_dims, crop_dims), image_interpolation='linear')(processed_subject)
+            processed_subject = tio.Resize((crop_dims, crop_dims, crop_dims), image_interpolation='linear')(processed_subject)
             # Process for HR scenario with slices of depth D
             for key in ['image', 'label']:
                 original_path = getattr(subject, key).path
