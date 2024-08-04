@@ -78,7 +78,7 @@ def process_images(cta_path, annotation_path, target_size_hw, target_size_d, new
         else:
             processed_subject = tio.Resize((crop_dims, crop_dims, crop_dims), image_interpolation='linear')(processed_subject)
             # Process for HR scenario with slices of depth D
-            for key in ['image', 'label']:
+            for key in ['label']:
                 original_path = getattr(subject, key).path
                 original_file_name = os.path.splitext(os.path.basename(original_path))[0].replace('.img.nii', '.img').replace('.label.nii', '.label')
                 save_path = str(original_path).replace('cta', 'cta_processed_hr').replace('annotation', 'annotation_processed_hr')
