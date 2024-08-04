@@ -60,7 +60,7 @@ if __name__ == '__main__':
     parser.add_argument("--output_directory", required=True, help="Directory to save the stitched volumes")
     parser.add_argument("--start_image_number", type=int, required=True, help="Starting image number for stitching")
     parser.add_argument("--end_image_number", type=int, required=True, help="Ending image number for stitching")
-    parser.add_argument("--label_map", action="store_true", help="Process label maps instead of CT images")
+    parser.add_argument("--label_map", type=bool, default=False, help="Process label maps instead of CT images")
     args = parser.parse_args()
 
     # Ensure the output directory exists
