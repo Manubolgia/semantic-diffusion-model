@@ -3,7 +3,7 @@ import nibabel as nib
 import numpy as np
 import argparse
 
-def stitch_volumes(input_directory, output_directory, start_image_number, end_image_number):
+def stitch_volumes(input_directory, output_directory, start_image_number, end_image_number, label_map):
     """
     Stitches together sub-volumes from the input directory into a single Nifti image.
 
@@ -12,9 +12,13 @@ def stitch_volumes(input_directory, output_directory, start_image_number, end_im
         output_directory (str): Directory to save the stitched volumes.
         start_image_number (int): Starting image number for stitching.
         end_image_number (int): Ending image number for stitching.
+        label_map (bool): Whether to process label maps instead of CT images.
     """
     for image_number in range(start_image_number, end_image_number + 1):
-        file_pattern = f"{image_number}.img_"
+        if label_map:
+            file_pattern = f"{image_number}.label_"
+        else:
+            file_pattern = f"{image_number}.img_"
         
         # Collect all files that match the pattern
         files = [f for f in os.listdir(input_directory) if f.startswith(file_pattern) and f.endswith('.nii.gz')]
@@ -45,9 +49,10 @@ def stitch_volumes(input_directory, output_directory, start_image_number, end_im
 
         # Create a new Nifti image for the stitched data and save it
         stitched_image = nib.Nifti1Image(stitched_data, affine=example_img.affine)
+        suffix = "label" if label_map else "image"
         output_file = os.path.join(output_directory, f"{image_number}.nii.gz")
         nib.save(stitched_image, output_file)
-        print(f"Stitched image saved to {output_file}")
+        print(f"Stitched {suffix} saved to {output_file}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Stitch Volumes")
@@ -55,10 +60,11 @@ if __name__ == '__main__':
     parser.add_argument("--output_directory", required=True, help="Directory to save the stitched volumes")
     parser.add_argument("--start_image_number", type=int, required=True, help="Starting image number for stitching")
     parser.add_argument("--end_image_number", type=int, required=True, help="Ending image number for stitching")
+    parser.add_argument("--label_map", action="store_true", help="Process label maps instead of CT images")
     args = parser.parse_args()
 
     # Ensure the output directory exists
     os.makedirs(args.output_directory, exist_ok=True)
 
     print('Starting stitching...')
-    stitch_volumes(args.input_directory, args.output_directory, args.start_image_number, args.end_image_number)
+    stitch_volumes(args.input_directory, args.output_directory, args.start_image_number, args.end_image_number, args.label_map)
