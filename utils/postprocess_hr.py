@@ -78,9 +78,9 @@ def stitch_and_normalize_volumes(directory, file_pattern, output_path, level, gt
         num_slices = img_data.shape[-1]
         gt_img_data = None
 
-        #img_data = (img_data*2) - 1
-        #img_data[img_data>0.999] = level # 0.9 #0.99
-        #img_data = (img_data + 1) / 2.0
+        img_data = (img_data*2) - 1
+        img_data[img_data>0.999] = level # 0.9 #0.99
+        img_data = (img_data + 1) / 2.0
         
         if gt_directory:
             gt_file = os.path.join(gt_directory, f)
